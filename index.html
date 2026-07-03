@@ -115,27 +115,14 @@
 
   html, body{
     margin:0; padding:0; height:100%; width:100%;
-    background: radial-gradient(ellipse at 30% 20%, #0d2044 0%, #060e1a 55%, #020810 100%);
+    background: transparent; /* AR real: nada de fondo propio, debe verse la cámara */
     font-family: var(--font-d);
     color: var(--text);
     overflow: hidden;
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Estrellas decorativas de fondo */
-  body::before{
-    content:"";
-    position:fixed; inset:0; z-index:0; pointer-events:none;
-    background-image:
-      radial-gradient(1px 1px at 15% 25%, rgba(150,200,255,.55) 0%, transparent 100%),
-      radial-gradient(1px 1px at 72% 14%, rgba(180,220,255,.45) 0%, transparent 100%),
-      radial-gradient(1.5px 1.5px at 45% 60%, rgba(120,180,255,.35) 0%, transparent 100%),
-      radial-gradient(1px 1px at 88% 72%, rgba(150,200,255,.40) 0%, transparent 100%),
-      radial-gradient(1px 1px at 28% 82%, rgba(100,160,255,.30) 0%, transparent 100%),
-      radial-gradient(2px 2px at 60% 38%, rgba(77,166,255,.20) 0%, transparent 100%);
-  }
-
-  a-scene{ position:absolute; top:0; left:0; width:100%; height:100%; }
+  a-scene{ position:absolute; top:0; left:0; width:100%; height:100%; z-index:2; }
 
   :focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
 
@@ -193,6 +180,34 @@
     color:#04201c; border-color:transparent;
   }
   #sideViewBtn:active{ transform: translateY(1px); }
+
+  /* ---------- Botón de fondo blanco (alterna cámara real / fondo claro) ---------- */
+  #bgToggleBtn{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:5px;
+    background: rgba(8,11,13,.72);
+    border:1px solid rgba(221,238,255,.35);
+    color: var(--steel);
+    border-radius:20px;
+    padding:6px 12px;
+    font-family: var(--font-d); font-size:11px; font-weight:600;
+    letter-spacing:.3px;
+    backdrop-filter: blur(4px);
+  }
+  #bgToggleBtn svg{ width:14px; height:14px; }
+  #bgToggleBtn.active{
+    background: linear-gradient(180deg, #ffffff, #e7ecf0);
+    color:#12181d; border-color:transparent;
+  }
+  #bgToggleBtn:active{ transform: translateY(1px); }
+
+  /* capa opaca que sustituye el video de cámara por un fondo blanco claro */
+  #whiteBgOverlay{
+    position:fixed; inset:0; z-index:1;
+    background: #f4f2ec;
+    display:none;
+  }
+  #whiteBgOverlay.active{ display:block; }
 
   #lateralHint{
     position:fixed; top:54px; left:50%; transform:translateX(-50%);
@@ -641,7 +656,11 @@
     <span class="eyebrow">Unidad III · Operaciones</span>
     <span class="title">Centrifugación — Simulador AR</span>
   </div>
-  <div style="pointer-events:auto; display:flex; align-items:center; gap:7px;">
+  <div style="pointer-events:auto; display:flex; align-items:center; gap:7px; flex-wrap:wrap; justify-content:flex-end; max-width:64%;">
+    <button id="bgToggleBtn" type="button" title="Cambiar entre cámara real y fondo blanco claro">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      <span id="bgToggleLabel">Fondo blanco</span>
+    </button>
     <button id="sideViewBtn" type="button" title="Ver el modelo 3D en vista lateral, sin necesidad del marcador">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
       <span id="sideViewLabel">Vista lateral</span>
@@ -676,6 +695,8 @@
   </button>
 </nav>
 
+<div id="whiteBgOverlay"></div>
+
 <a-scene
   vr-mode-ui="enabled: false"
   renderer="alpha: true; antialias: true"
@@ -688,8 +709,16 @@
   <a-entity light="type: directional; color:#bfe9ff; intensity:0.28" position="-0.7 0.4 -0.5"></a-entity>
   <a-entity light="type: hemisphere; color:#dfe9ee; groundColor:#1a1f22; intensity:0.35"></a-entity>
 
-  <a-marker preset="hiro" id="hiroMarker">
-    <a-entity id="rig" centrifuge-sim position="0 0 0">
+  <a-marker preset="hiro" id="hiroMarker"></a-marker>
+
+  <!-- #rig vive FUERA del marcador, directamente en la escena. Así nunca hay
+       que desprenderlo/reinsertarlo del árbol de #hiroMarker (eso era lo que
+       provocaba que la simulación desapareciera al usar "Vista lateral" y
+       obligaba a recargar). En su lugar, el componente rig-follow copia cada
+       fotograma la transformación mundial del marcador sobre #rig cuando se
+       está en modo AR, y deja de hacerlo (dejando el control a los gestos de
+       arrastre) cuando se activa la vista lateral libre. -->
+  <a-entity id="rig" centrifuge-sim rig-follow="target: #hiroMarker" position="0 0 0" visible="false">
 
       <!-- sombra de contacto (AO simple) -->
       <a-entity id="contactShadow"
@@ -822,14 +851,7 @@
 
       <a-entity id="particleHolder"></a-entity>
 
-    </a-entity>
-  </a-marker>
-
-  <!-- Contenedor estático usado por la "vista lateral": cuando se activa,
-       el nodo #rig se traslada aquí (dejando de depender del tracking del
-       marcador) y se posiciona con un ángulo lateral fijo, rotable con el
-       dedo/mouse. Al desactivar, #rig vuelve a #hiroMarker. -->
-  <a-entity id="staticViewHolder" visible="false" position="0 -0.02 -0.42" rotation="8 35 0"></a-entity>
+  </a-entity>
 
   <a-entity camera></a-entity>
 </a-scene>
@@ -1174,7 +1196,8 @@
   var SIM = {
     paused: false,
     finished: false,           // true cuando todas las partículas ya llegaron a su destino
-    substance: null            // { dRho, dp_um, color, particles:[{radius,angle,y,el,arrived}], accumulation, lastSign }
+    substance: null,           // { dRho, dp_um, color, particles:[{radius,angle,y,el,arrived}], accumulation, lastSign }
+    lateralActive: false       // true = vista lateral libre (sin depender del marcador)
   };
 
   // ---------------- DOM refs -----------------------------------
@@ -1218,9 +1241,12 @@
 
   var sideViewBtn = document.getElementById('sideViewBtn');
   var sideViewLabel = document.getElementById('sideViewLabel');
+  var bgToggleBtn = document.getElementById('bgToggleBtn');
+  var bgToggleLabel = document.getElementById('bgToggleLabel');
+  var whiteBgOverlay = document.getElementById('whiteBgOverlay');
   var lateralHint = document.getElementById('lateralHint');
-  var staticViewHolder = document.getElementById('staticViewHolder');
   var hiroMarkerEl = document.getElementById('hiroMarker');
+  var rigEl = document.getElementById('rig');
   var sceneEl = document.querySelector('a-scene');
 
   // ---------------- Cálculo de variables físicas ----------------
@@ -1576,6 +1602,39 @@
     }
   }
 
+  // ---------------- Componente A-Frame: seguimiento del marcador ----------------
+  // #rig vive fuera de #hiroMarker. Mientras la vista lateral NO esté activa,
+  // este componente copia cada fotograma la posición/rotación/escala mundial
+  // del marcador sobre #rig y sincroniza su visibilidad con el tracking.
+  // Cuando la vista lateral SÍ está activa, no toca la transformación (el
+  // arrastre del usuario la controla directamente) y fuerza la visibilidad.
+  // Al no reparentar nunca el nodo, se elimina el bug que hacía que la
+  // simulación desapareciera al usar "Vista lateral".
+  AFRAME.registerComponent('rig-follow', {
+    schema: { target: { type: 'selector' } },
+    tick: function () {
+      var el = this.el;
+      if (SIM.lateralActive) {
+        el.object3D.visible = true;
+        return;
+      }
+      var target = this.data.target;
+      if (!target || !target.object3D) return;
+      var visible = target.object3D.visible;
+      el.object3D.visible = visible;
+      if (!visible) return;
+      var THREE = AFRAME.THREE;
+      target.object3D.updateMatrixWorld();
+      var pos = new THREE.Vector3();
+      var quat = new THREE.Quaternion();
+      var scale = new THREE.Vector3();
+      target.object3D.matrixWorld.decompose(pos, quat, scale);
+      el.object3D.position.copy(pos);
+      el.object3D.quaternion.copy(quat);
+      el.object3D.scale.copy(scale);
+    }
+  });
+
   // ---------------- Componente A-Frame: motor de la simulación ----------------
   AFRAME.registerComponent('centrifuge-sim', {
     init: function(){
@@ -1731,38 +1790,49 @@
     pauseLabel.textContent = 'Pausa';
   });
 
-  // ---------------- Vista lateral (modelo 3D sin marcador) ----------------
-  // Al activarse, el nodo #rig (con todo el equipo y las partículas) se
-  // reubica del interior de <a-marker> al contenedor estático
-  // #staticViewHolder, con un ángulo lateral fijo que puede rotarse con
-  // el dedo o el mouse. La lógica de simulación (centrifuge-sim, tick,
-  // partículas) no cambia: sigue operando sobre el mismo nodo #rig, solo
-  // que ahora su transform ya no depende del tracking AR del marcador.
-  var lateralActive = false;
+  // ---------------- Fondo blanco (alterna cámara real / fondo claro) ----------------
+  // Es puramente visual: coloca una capa opaca clara detrás del canvas 3D
+  // (que sigue siendo transparente) tapando el video de la cámara. El
+  // tracking del marcador sigue funcionando igual, ya que AR.js lee los
+  // píxeles del video directamente, no lo que se ve en pantalla.
+  var whiteBgActive = false;
+  bgToggleBtn.addEventListener('click', function(){
+    whiteBgActive = !whiteBgActive;
+    bgToggleBtn.classList.toggle('active', whiteBgActive);
+    bgToggleLabel.textContent = whiteBgActive ? 'Cámara' : 'Fondo blanco';
+    whiteBgOverlay.classList.toggle('active', whiteBgActive);
+  });
+
+  // ---------------- Vista lateral (modelo 3D sin depender del marcador) ----------------
+  // #rig vive siempre en la escena (fuera de <a-marker>), así que activar la
+  // vista lateral NUNCA reparenta ni destruye nada: solo cambia la bandera
+  // SIM.lateralActive. El componente rig-follow (ver arriba) deja entonces de
+  // copiar la transformación del marcador y el equipo se queda quieto en un
+  // ángulo lateral fijo, rotable con el dedo o el mouse, sin desaparecer ni
+  // requerir volver a cargar la página. Al desactivarla, rig-follow retoma el
+  // seguimiento del marcador automáticamente.
   var lateralDrag = { active:false, lastX:0, lastY:0 };
   var lateralRotation = { x: 8, y: 35 };
+  var LATERAL_POSITION = { x: 0, y: -0.02, z: -0.42 };
 
-  function setStaticHolderRotation(){
-    staticViewHolder.setAttribute('rotation', lateralRotation.x + ' ' + lateralRotation.y + ' 0');
+  function applyLateralTransform(){
+    rigEl.setAttribute('position', LATERAL_POSITION.x + ' ' + LATERAL_POSITION.y + ' ' + LATERAL_POSITION.z);
+    rigEl.setAttribute('rotation', lateralRotation.x + ' ' + lateralRotation.y + ' 0');
   }
 
   sideViewBtn.addEventListener('click', function(){
-    var rig = document.getElementById('rig');
-    lateralActive = !lateralActive;
-    sideViewBtn.classList.toggle('active', lateralActive);
-    sideViewLabel.textContent = lateralActive ? 'Modo AR' : 'Vista lateral';
-    lateralHint.classList.toggle('show', lateralActive);
+    SIM.lateralActive = !SIM.lateralActive;
+    sideViewBtn.classList.toggle('active', SIM.lateralActive);
+    sideViewLabel.textContent = SIM.lateralActive ? 'Modo AR' : 'Vista lateral';
+    lateralHint.classList.toggle('show', SIM.lateralActive);
 
-    if (lateralActive){
-      staticViewHolder.appendChild(rig);
-      staticViewHolder.setAttribute('visible', 'true');
-      setStaticHolderRotation();
+    if (SIM.lateralActive){
+      applyLateralTransform();
       markerHint.style.opacity = '0';
       markerHint.style.pointerEvents = 'none';
     } else {
-      hiroMarkerEl.appendChild(rig);
-      staticViewHolder.setAttribute('visible', 'false');
-      // el listener markerFound/markerLost restaura el aviso del marcador
+      // rig-follow retoma el control del transform en el próximo tick;
+      // el aviso del marcador se restaura si el marcador no está detectado.
       markerHint.style.opacity = '1';
       markerHint.style.pointerEvents = 'auto';
     }
@@ -1770,20 +1840,20 @@
 
   // arrastrar (mouse/touch) para rotar el equipo en vista lateral
   function lateralDragStart(x, y){
-    if (!lateralActive) return;
+    if (!SIM.lateralActive) return;
     lateralDrag.active = true;
     lateralDrag.lastX = x;
     lateralDrag.lastY = y;
   }
   function lateralDragMove(x, y){
-    if (!lateralActive || !lateralDrag.active) return;
+    if (!SIM.lateralActive || !lateralDrag.active) return;
     var dx = x - lateralDrag.lastX;
     var dy = y - lateralDrag.lastY;
     lateralDrag.lastX = x;
     lateralDrag.lastY = y;
     lateralRotation.y += dx * 0.35;
     lateralRotation.x = Math.max(-40, Math.min(60, lateralRotation.x - dy * 0.25));
-    setStaticHolderRotation();
+    applyLateralTransform();
   }
   function lateralDragEnd(){ lateralDrag.active = false; }
 
@@ -1791,11 +1861,11 @@
   window.addEventListener('mousemove', function(e){ lateralDragMove(e.clientX, e.clientY); });
   window.addEventListener('mouseup', lateralDragEnd);
   sceneEl.addEventListener('touchstart', function(e){
-    if (!lateralActive) return;
+    if (!SIM.lateralActive) return;
     var t = e.touches[0]; lateralDragStart(t.clientX, t.clientY);
   }, { passive:true });
   sceneEl.addEventListener('touchmove', function(e){
-    if (!lateralActive) return;
+    if (!SIM.lateralActive) return;
     var t = e.touches[0]; lateralDragMove(t.clientX, t.clientY);
   }, { passive:true });
   sceneEl.addEventListener('touchend', lateralDragEnd);
@@ -1924,7 +1994,7 @@
     markerHint.style.pointerEvents = 'none';
   });
   markerEl.addEventListener('markerLost', function(){
-    if (lateralActive) return; // en vista lateral el aviso de marcador permanece oculto
+    if (SIM.lateralActive) return; // en vista lateral el aviso de marcador permanece oculto
     markerHint.style.opacity = '1';
     markerHint.style.pointerEvents = 'auto';
   });

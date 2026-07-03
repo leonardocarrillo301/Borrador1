@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Simulador AR · Centrifugación (Unidad III)</title>
+
+<!--
+  =====================================================================
+  ECUACIONES GOBERNANTES (referencia: McCabe, Smith & Harriott -
+  "Operaciones Unitarias en Ingeniería Química" / Geankoplis -
+  "Procesos de Transporte y Operaciones Unitarias")
+  =====================================================================
+
+   1) Velocidad angular:
+        omega = (2 * PI * N) / 60                    [rad/s]   N = RPM
+
+   2) Factor de separación centrífugo (G):
+        G = (omega^2 * r) / g                          [adimensional]
+
+   3) Velocidad terminal de migración radial de la partícula
+      (Ley de Stokes aplicada a campo centrífugo, régimen laminar):
+        v_t = ( d_p^2 * (rho_p - rho_f) * omega^2 * r ) / (18 * mu)   [m/s]
+
+   Variables OBLIGATORIAS del taller (sliders principales, color ámbar):
+        N (RPM), r (radio del tambor)
+        Δρ = ρp - ρf y d_p son ahora propiedades de cada SUSTANCIA/partícula
+        sólida agregada (ver REVISIÓN v3 más abajo), no de un único slider global.
+
+   Parámetro AUXILIAR ajustable (slider secundario, color cian,
+   plegado en "Parámetros avanzados"):
+        mu   (viscosidad de la fase continua, mPa·s = cP) — propiedad del
+        fluido, común a todas las sustancias del tambor.
+   g se mantiene fijo en 9.81 m/s².
+
+   NOTA DE INGENIERÍA PARA EL EQUIPO:
+   La rotación visual del rotor y la velocidad radial de las partículas
+   en pantalla están ligadas matemáticamente a omega y v_t reales, pero
+   se aplica un límite (clamp) de visualización para que, en RPM muy
+   altas, el movimiento siga siendo perceptible al ojo humano. Los
+   valores numéricos del panel (omega, G, v_t) SIEMPRE corresponden al
+   cálculo físico exacto, sin recortar. Esto debe documentarse en la
+   bitácora de co-creación con IA.
+
+   REVISIÓN VISUAL v2: esta pasada solo modifica presentación (UI del
+   panel y modelo 3D del equipo). No se alteró ninguna fórmula ni
+   constante física de las listadas arriba.
+
+   REVISIÓN v4 (panel por secciones + barra lateral + sustancia única + dinámica no cíclica):
+   - El panel se organizó en 4 secciones navegables con scroll vertical y
+     riel visible: Datos en tiempo real, Equipo/variables, Partícula/
+     sustancia y Ecuaciones. Una barra lateral fija (#sideNav) permite
+     saltar entre ellas.
+   - Se removió la gestión multi-sustancia (agregar/quitar partículas).
+     Ahora hay una sola sustancia activa (SIM.substance), con sus propios
+     sliders de Δρ y d_p en la sección "Partícula".
+   - El tamaño visual de cada esfera ahora escala con d_p real
+     (particleVisualRadius), en vez de un radio fijo arbitrario.
+   - La velocidad radial visual ya no se recorta con un clamp arbitrario:
+     se escala con el mismo factor que la velocidad angular visual
+     (SPEED_VIS_SCALE = ANGULAR_VIS_SCALE), preservando la proporción
+     real entre v_t de distintas condiciones.
+   - La simulación deja de repetirse en bucle infinito: cada partícula
+     se detiene al llegar a su destino (pared o núcleo) y, cuando todas
+     llegan, la simulación se pausa sola mostrando "Simulación completa".
+     El usuario debe pulsar "Repetir simulación" para reiniciar el
+     recorrido de las partículas.
+   - No se alteró ninguna fórmula física (computeOmegaG/computeVt
+     siguen siendo exactamente las mismas).
+  =====================================================================
+-->
+
+<!-- Tutor estimado: si necesitas verificar que las fórmulas no cambiaron,
+     revisa computeOmegaG() y computeVt() en el script — son la misma
+     ecuación de la versión anterior (computeVars), solo separada para
+     poder evaluarse una vez por sustancia en cada fotograma. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Newsreader:ital,wght@0,500;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+<style>
+  :root{
+    --bg-1: #060e1a;
+    --bg-2: #0a1628;
+    --bg-3: #0d1e34;
+    --panel-edge: rgba(255,138,0,.55);
+    --bg-readout: #071020;
+    --accent: #ff9020;
+    --accent-dim: #7a3f08;
+    --accent-glow: rgba(255,144,32,.42);
+    --cyan: #00e5c7;
+    --cyan-dim: #0a6e62;
+    --cyan-glow: rgba(0,229,199,.35);
+    --blue: #4da6ff;
+    --blue-dim: #1a3a6a;
+    --blue-glow: rgba(77,166,255,.30);
+    --violet: #b06aff;
+    --violet-glow: rgba(176,106,255,.25);
+    --text: #ddeeff;
+    --text-dim: #7a9ab8;
+    --text-faint: #4a6680;
+    --steel: #c7d8e8;
+    --danger: #c9763a;
+    --cream: #f2d680;
+    --font-d: 'Space Grotesk', -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-m: 'IBM Plex Mono', "SF Mono", "Courier New", monospace;
+    --font-eq: 'Newsreader', Georgia, 'Times New Roman', serif;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0; padding:0; height:100%; width:100%;
+    background: radial-gradient(ellipse at 30% 20%, #0d2044 0%, #060e1a 55%, #020810 100%);
+    font-family: var(--font-d);
+    color: var(--text);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Estrellas decorativas de fondo */
+  body::before{
+    content:"";
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:
+      radial-gradient(1px 1px at 15% 25%, rgba(150,200,255,.55) 0%, transparent 100%),
+      radial-gradient(1px 1px at 72% 14%, rgba(180,220,255,.45) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 45% 60%, rgba(120,180,255,.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 72%, rgba(150,200,255,.40) 0%, transparent 100%),
+      radial-gradient(1px 1px at 28% 82%, rgba(100,160,255,.30) 0%, transparent 100%),
+      radial-gradient(2px 2px at 60% 38%, rgba(77,166,255,.20) 0%, transparent 100%);
+  }
+
+  a-scene{ position:absolute; top:0; left:0; width:100%; height:100%; }
+
+  :focus-visible{ outline:2px solid var(--cyan); outline-offset:2px; }
+
+  .icon{ width:15px; height:15px; display:inline-block; vertical-align:-3px; margin-right:5px; flex:none; }
+  .chev{ transition: transform .25s ease; }
+
+  /* ---------- Barra superior (identidad) ---------- */
+  #topBar{
+    position:fixed; top:0; left:0; right:0;
+    z-index: 22;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 9px 12px 7px;
+    background: linear-gradient(180deg, rgba(5,7,9,.78) 0%, rgba(5,7,9,0) 100%);
+    pointer-events:none;
+  }
+  #topBar .brand{ display:flex; flex-direction:column; line-height:1.1; }
+  #topBar .eyebrow{
+    font-size:9px; letter-spacing:2.2px; color: var(--accent);
+    font-weight:600; text-transform:uppercase;
+  }
+  #topBar .title{
+    font-size:13.5px; font-weight:600; letter-spacing:.3px; color: var(--text);
+  }
+  #topBar .rpmChip{
+    pointer-events:none;
+    display:flex; align-items:baseline; gap:4px;
+    background: rgba(8,11,13,.72);
+    border:1px solid rgba(255,138,0,.35);
+    border-radius:20px;
+    padding:5px 11px;
+    backdrop-filter: blur(4px);
+  }
+  #topBar .rpmChip b{
+    font-family: var(--font-m); font-size:14px; color: var(--accent);
+    text-shadow: 0 0 8px var(--accent-glow);
+  }
+  #topBar .rpmChip span{ font-size:8.5px; color: var(--text-dim); letter-spacing:1px; }
+
+  /* ---------- Botón de vista lateral (modo 3D sin marcador) ---------- */
+  #sideViewBtn{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:5px;
+    background: rgba(8,11,13,.72);
+    border:1px solid rgba(0,229,199,.4);
+    color: var(--cyan);
+    border-radius:20px;
+    padding:6px 12px;
+    font-family: var(--font-d); font-size:11px; font-weight:600;
+    letter-spacing:.3px;
+    backdrop-filter: blur(4px);
+  }
+  #sideViewBtn svg{ width:14px; height:14px; }
+  #sideViewBtn.active{
+    background: linear-gradient(180deg, #21f3d4, var(--cyan));
+    color:#04201c; border-color:transparent;
+  }
+  #sideViewBtn:active{ transform: translateY(1px); }
+
+  #lateralHint{
+    position:fixed; top:54px; left:50%; transform:translateX(-50%);
+    z-index:20; display:none;
+    background: rgba(8,11,13,.8);
+    border:1px solid var(--cyan-dim); color: var(--text);
+    padding:6px 13px; border-radius:20px; font-size:11px;
+    text-align:center; backdrop-filter: blur(4px);
+  }
+  #lateralHint.show{ display:block; }
+
+  /* ---------- Aviso de marcador (visor estilo escáner) ---------- */
+  #markerHint{
+    position:fixed; top:54px; left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    z-index: 20;
+    transition: opacity .3s ease;
+  }
+  #markerHint .frame{
+    width:84px; height:84px; position:relative;
+  }
+  #markerHint .frame i{
+    position:absolute; width:18px; height:18px;
+    border-color: var(--accent); opacity:.9;
+    animation: scanPulse 1.6s infinite ease-in-out;
+  }
+  #markerHint .frame i:nth-child(1){ top:0; left:0; border-top:2px solid; border-left:2px solid; }
+  #markerHint .frame i:nth-child(2){ top:0; right:0; border-top:2px solid; border-right:2px solid; animation-delay:.1s; }
+  #markerHint .frame i:nth-child(3){ bottom:0; left:0; border-bottom:2px solid; border-left:2px solid; animation-delay:.2s; }
+  #markerHint .frame i:nth-child(4){ bottom:0; right:0; border-bottom:2px solid; border-right:2px solid; animation-delay:.3s; }
+  @keyframes scanPulse{ 0%,100%{opacity:.35;} 50%{opacity:1;} }
+  #markerHint .txt{
+    background: rgba(8,11,13,.8);
+    border:1px solid var(--accent-dim);
+    color: var(--text);
+    padding:6px 13px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    letter-spacing:.2px;
+    backdrop-filter: blur(4px);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #markerHint .frame i{ animation:none; }
+  }
+
+  /* ---------- Panel inferior ---------- */
+  #panel{
+    position:fixed; left:0; right:0; bottom:0;
+    background: linear-gradient(180deg, rgba(6,14,26,.92) 0%, rgba(4,9,18,.98) 100%);
+    border-top: 1px solid rgba(77,166,255,.18);
+    padding: 9px 13px calc(9px + env(safe-area-inset-bottom,0px));
+    z-index: 10;
+    backdrop-filter: blur(10px) saturate(140%);
+    box-shadow: 0 -12px 40px rgba(0,20,60,.65), 0 -1px 0 rgba(77,166,255,.10);
+  }
+  #panel::before{
+    content:"";
+    position:absolute; top:-1px; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--violet) 0%, var(--accent) 30%, var(--cyan) 60%, var(--blue) 100%);
+    box-shadow: 0 0 14px rgba(255,138,0,.35), 0 0 28px rgba(0,229,199,.2);
+  }
+
+  #handleRow{ display:flex; align-items:center; gap:7px; }
+
+  button{
+    font-family: var(--font-d); cursor:pointer; border:none;
+    letter-spacing:.4px;
+  }
+  #pauseBtn{
+    flex: 1.4; padding:10px 10px; font-size:14px; font-weight:700;
+    border-radius:9px;
+    display:flex; align-items:center; justify-content:center;
+    background: linear-gradient(180deg, #ff9d24, var(--accent));
+    color:#1a1100;
+    box-shadow: 0 2px 0 var(--accent-dim), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  #pauseBtn.is-paused{
+    background: linear-gradient(180deg, #21f3d4, var(--cyan));
+    color:#04201c;
+    box-shadow: 0 2px 0 #007a69, inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  #pauseBtn:active{ transform: translateY(2px); box-shadow:none; }
+  #pauseBtn .icon-play{ display:none; }
+  #pauseBtn.is-paused .icon-pause{ display:none; }
+  #pauseBtn.is-paused .icon-play{ display:inline-block; }
+
+  #resetBtn, #panelToggle{
+    flex: none; padding:10px 13px; font-size:12px; font-weight:600;
+    border-radius:9px; color: var(--text);
+    display:flex; align-items:center;
+    background: rgba(255,255,255,.04); border:1px solid #2c3338;
+    white-space:nowrap;
+  }
+  #resetBtn:active, #panelToggle:active{ background: rgba(255,255,255,0.1); }
+  #panelToggle.is-collapsed .chev{ transform: rotate(180deg); }
+
+  /* cuerpo colapsable */
+  #panelBody{
+    overflow:hidden;
+    max-height: 640px;
+    opacity:1;
+    transition: max-height .25s ease, opacity .2s ease, margin-top .25s ease;
+    margin-top:10px;
+  }
+  #panelBody.collapsed{
+    max-height:0; opacity:0; margin-top:0; pointer-events:none;
+  }
+
+  .eyebrow{
+    font-size:9.5px; letter-spacing:1.8px; color: var(--text-faint);
+    text-transform:uppercase; font-weight:600;
+    margin: 2px 0 6px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .eyebrow::after{
+    content:""; flex:1; height:1px;
+    background: linear-gradient(90deg, #232b2f, transparent);
+  }
+
+  #readouts{
+    display:grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap:7px;
+    margin-bottom:9px;
+  }
+  .gauge{
+    position:relative;
+    background: linear-gradient(160deg, #071528 0%, #040d1a 100%);
+    border:1px solid rgba(77,166,255,.20);
+    border-radius:8px;
+    padding:6px 6px 7px;
+    text-align:center;
+    box-shadow: inset 0 1px 8px rgba(0,0,0,.6), 0 0 12px rgba(77,166,255,.06);
+    overflow:hidden;
+  }
+  .gauge::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--blue), var(--cyan));
+    opacity:.65;
+  }
+  .gauge .lab{
+    font-size:8.5px; letter-spacing:1.4px; color: var(--text-dim);
+    text-transform:uppercase;
+  }
+  .gauge .val{
+    font-family: var(--font-m);
+    font-size: 13.5px; font-weight:500;
+    color: var(--cyan);
+    text-shadow: 0 0 7px var(--cyan-glow);
+    line-height:1.3;
+    letter-spacing:0;
+    white-space:nowrap;
+  }
+  .gauge .unit{ font-size:8.5px; color: var(--text-faint); }
+
+  #estado{
+    display:flex; align-items:center; gap:8px;
+    font-size:11.5px;
+    padding:7px 11px;
+    border-radius:20px;
+    margin-bottom:10px;
+    border:1px solid #283034;
+    background: rgba(255,255,255,0.025);
+  }
+  #estado .dot{
+    width:8px; height:8px; border-radius:50%; flex:none;
+    background: var(--estado-color, var(--text-dim));
+    box-shadow: 0 0 8px var(--estado-color, transparent);
+  }
+  #estado b{ font-weight:600; }
+
+  .ctrl{ margin-bottom:8px; }
+  .ctrl-head{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:12px; margin-bottom:3px;
+  }
+  .ctrl-head .name{ color: var(--text); font-weight:500; }
+  .ctrl-head .live{ font-family: var(--font-m); color: var(--accent); font-size:12.5px; }
+  .ctrl.secondary .ctrl-head .live{ color: var(--cyan); }
+
+  input[type=range]{
+    -webkit-appearance:none; appearance:none;
+    width:100%; height:26px; background:transparent;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:5px; background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    border-radius:3px;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; appearance:none;
+    width:19px; height:19px; margin-top:-7.5px;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 30%, #fff, var(--text) 60%);
+    border:3px solid var(--accent);
+    box-shadow: 0 1px 4px rgba(0,0,0,.5);
+  }
+  .ctrl.secondary input[type=range]::-webkit-slider-runnable-track{
+    background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  }
+  .ctrl.secondary input[type=range]::-webkit-slider-thumb{ border-color: var(--cyan); }
+
+  input[type=range]::-moz-range-track{
+    height:5px; background: linear-gradient(90deg, var(--accent-dim), var(--accent));
+    border-radius:3px;
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px; height:14px; border-radius:50%;
+    background: var(--text); border:3px solid var(--accent);
+  }
+  .ctrl.secondary input[type=range]::-moz-range-track{
+    background: linear-gradient(90deg, var(--cyan-dim), var(--cyan));
+  }
+  .ctrl.secondary input[type=range]::-moz-range-thumb{ border-color: var(--cyan); }
+
+  #advToggle{
+    font-size:11.5px; color: var(--cyan); font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+    padding:9px 4px 5px; cursor:pointer; user-select:none;
+    border-top: 1px dashed #1f2c2e; margin-top:3px;
+  }
+  #advToggle.open .chev{ transform: rotate(180deg); }
+  #advNote{
+    font-size:9.5px; color:var(--text-faint); text-align:center;
+    margin:-2px 0 7px;
+  }
+  #advPanel{
+    overflow:hidden; max-height:0; opacity:0;
+    transition: max-height .22s ease, opacity .18s ease;
+  }
+  #advPanel.open{ max-height:480px; opacity:1; margin-top:6px; }
+
+  /* ---------- Fila slider + input numérico ---------- */
+  .ctrl-row{ display:flex; align-items:center; gap:8px; }
+  .ctrl-row input[type=range]{ flex:1; min-width:0; }
+  .numBox{
+    flex:none; width:62px;
+    font-family: var(--font-m); font-size:12px; text-align:center;
+    color: var(--accent); background: var(--bg-readout);
+    border:1px solid #2c3338; border-radius:7px;
+    padding:5px 3px;
+    -moz-appearance: textfield;
+  }
+  .numBox::-webkit-outer-spin-button,
+  .numBox::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .ctrl.secondary .numBox{ color: var(--cyan); }
+  .numBox:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .ctrl.secondary .numBox:focus{ outline-color: var(--cyan); }
+
+  /* =====================================================================
+     BARRA LATERAL DE NAVEGACIÓN (desplazamiento vertical entre secciones)
+     ===================================================================== */
+  #sideNav{
+    position:fixed; right:6px; top:50%; transform:translateY(-50%);
+    z-index:23;
+    display:flex; flex-direction:column; gap:8px;
+    background: linear-gradient(160deg, rgba(6,20,44,.88) 0%, rgba(4,12,28,.92) 100%);
+    border:1px solid rgba(77,166,255,.28);
+    border-radius:16px;
+    padding:8px 6px;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 4px 20px rgba(0,10,40,.5), 0 0 0 1px rgba(77,166,255,.08);
+  }
+  #sideNav button{
+    width:34px; height:34px; border-radius:10px;
+    background: rgba(77,166,255,.06);
+    border:1px solid rgba(77,166,255,.18);
+    color: var(--text-dim);
+    display:flex; align-items:center; justify-content:center;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  #sideNav button svg{ width:16px; height:16px; }
+  #sideNav button.active{
+    background: linear-gradient(160deg, rgba(255,157,36,.22), rgba(255,138,0,.14));
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  #sideNav button:active{ background: rgba(255,255,255,.12); }
+
+  /* secciones del panel + scroll vertical con riel visible */
+  #panelScroll{
+    max-height: 56vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+    padding-right:4px;
+  }
+  #panelScroll::-webkit-scrollbar{ width:5px; }
+  #panelScroll::-webkit-scrollbar-track{ background: rgba(77,166,255,.04); border-radius:4px; }
+  #panelScroll::-webkit-scrollbar-thumb{ background: var(--blue-dim); border-radius:4px; }
+  #panelScroll::-webkit-scrollbar-thumb:hover{ background: var(--blue); }
+
+  .panelSection{ padding-top:2px; padding-bottom:14px; scroll-margin-top:4px; }
+  .panelSection + .panelSection{
+    border-top:1px dashed rgba(77,166,255,.18); margin-top:4px; padding-top:14px;
+  }
+  .sectionTitle{
+    font-size:12.5px; font-weight:700; color: var(--text);
+    display:flex; align-items:center; gap:7px; margin-bottom:8px;
+  }
+  .sectionTitle svg{ width:15px; height:15px; color: var(--accent); flex:none; }
+
+  /* ---------- Sección Ecuaciones ---------- */
+  .eqCard{
+    background: linear-gradient(160deg, #071528 0%, #040e1c 100%);
+    border:1px solid rgba(77,166,255,.22);
+    border-radius:9px;
+    padding:10px 12px 11px;
+    margin-bottom:9px;
+    box-shadow: 0 2px 12px rgba(0,10,30,.4);
+  }
+  .eqCard .eqName{ font-size:10.5px; color: var(--text-dim); letter-spacing:.3px; margin-bottom:6px; }
+  .eqCard .eqDesc{ font-size:10px; color: var(--text-faint); margin-top:6px; line-height:1.45; }
+  .eqCard .eqRange{ font-size:9px; color: var(--text-faint); margin-top:2px; }
+
+  /* --- notación matemática "de verdad": fracciones apiladas, superíndices,
+     subíndices, en una tipografía serif de ecuación en vez de una sola
+     línea monoespaciada --- */
+  .eqFormula{
+    font-family: var(--font-eq); font-style:italic; font-size:15px;
+    color: var(--cyan);
+    display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+    overflow-x:auto; padding-bottom:2px;
+  }
+  .eqFormula .eqSign{ font-style:normal; opacity:.85; }
+  .eqFormula sup{ font-size:.62em; line-height:0; }
+  .eqFormula sub{ font-size:.62em; line-height:0; }
+  .eqFrac{
+    display:inline-flex; flex-direction:column; align-items:center;
+    vertical-align:middle; margin:0 1px;
+  }
+  .eqFrac .num, .eqFrac .den{
+    padding:0 5px; white-space:nowrap;
+  }
+  .eqFrac .num{ border-bottom:1.4px solid var(--cyan); padding-bottom:2px; }
+  .eqFrac .den{ padding-top:2px; }
+  .eqLn{ font-style:italic; }
+  .eqLn .arg{ font-style:italic; }
+
+  /* ---------- Nota de rango bajo cada slider ---------- */
+  .rangeNote{
+    font-family: var(--font-m); font-size:9px; color: var(--text-faint);
+    margin-top:3px; letter-spacing:.2px;
+  }
+  .rangeNote b{ color: var(--text-dim); font-weight:600; }
+
+  /* ---------- Botón repetir simulación ---------- */
+  #repeatBtn{
+    width:100%; padding:10px 6px; font-size:12.5px; font-weight:700;
+    border-radius:9px; color:#04201c;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background: linear-gradient(180deg, #21f3d4, var(--cyan));
+    box-shadow: 0 2px 0 #007a69, inset 0 1px 0 rgba(255,255,255,.25);
+    margin-top:4px;
+  }
+  #repeatBtn:active{ transform: translateY(2px); box-shadow:none; }
+  #repeatBtn svg{ width:14px; height:14px; }
+  #repeatBtn[hidden]{ display:none; }
+
+  /* =====================================================================
+     CALCULADORA DE PARÁMETROS DE CENTRIFUGACIÓN
+     ===================================================================== */
+  .calcGrid{
+    display:grid; grid-template-columns: 1fr 1fr; gap:7px;
+    margin-bottom:10px;
+  }
+  .calcField{
+    display:flex; flex-direction:column; gap:3px;
+  }
+  .calcField label{
+    font-size:9.5px; color: var(--text-dim); letter-spacing:.8px;
+    text-transform:uppercase; font-weight:600;
+  }
+  .calcField input{
+    font-family: var(--font-m); font-size:12px; text-align:center;
+    color: var(--blue); background: linear-gradient(160deg, #071528, #040e1c);
+    border:1px solid rgba(77,166,255,.30); border-radius:7px;
+    padding:7px 4px;
+    -moz-appearance: textfield;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .calcField input:focus{
+    outline:none; border-color: var(--blue);
+    box-shadow: 0 0 0 2px rgba(77,166,255,.18);
+  }
+  .calcField input::-webkit-outer-spin-button,
+  .calcField input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  .calcField .unit{
+    font-size:8.5px; color: var(--text-faint); text-align:center; margin-top:-1px;
+  }
+
+  #calcBtn{
+    width:100%; padding:10px 6px; font-size:13px; font-weight:700;
+    border-radius:9px; color:#020c1a;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    background: linear-gradient(180deg, #5ec0ff, var(--blue));
+    box-shadow: 0 2px 0 var(--blue-dim), inset 0 1px 0 rgba(255,255,255,.25);
+    margin-bottom:10px;
+  }
+  #calcBtn:active{ transform: translateY(2px); box-shadow:none; }
+  #calcBtn svg{ width:14px; height:14px; }
+
+  #calcResults{
+    display:grid; grid-template-columns: repeat(2,1fr); gap:7px;
+    display:none;
+  }
+  #calcResults.visible{ display:grid; }
+  .calcOut{
+    position:relative; overflow:hidden;
+    background: linear-gradient(160deg, #071e3a 0%, #040c1e 100%);
+    border:1px solid rgba(77,166,255,.28);
+    border-radius:9px; padding:7px 8px 8px; text-align:center;
+    box-shadow: 0 0 16px rgba(77,166,255,.08);
+  }
+  .calcOut::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:2px;
+    background: linear-gradient(90deg, var(--blue), var(--violet));
+  }
+  .calcOut .co-lab{
+    font-size:8.5px; letter-spacing:1.2px; color: var(--text-dim); text-transform:uppercase;
+  }
+  .calcOut .co-val{
+    font-family: var(--font-m); font-size:13.5px; font-weight:500;
+    color: var(--blue);
+    text-shadow: 0 0 8px var(--blue-glow);
+    line-height:1.35;
+    white-space:nowrap;
+  }
+  .calcOut.highlight .co-val{
+    color: var(--cyan);
+    text-shadow: 0 0 8px var(--cyan-glow);
+    font-size:15px;
+  }
+  .calcOut .co-unit{ font-size:8px; color: var(--text-faint); }
+  .calcNote{
+    font-size:9px; color: var(--text-faint); text-align:center; margin-top:6px;
+    line-height:1.4;
+  }
+</style>
+</head>
+
+<body>
+
+<div id="topBar">
+  <div class="brand">
+    <span class="eyebrow">Unidad III · Operaciones</span>
+    <span class="title">Centrifugación — Simulador AR</span>
+  </div>
+  <div style="pointer-events:auto; display:flex; align-items:center; gap:7px;">
+    <button id="sideViewBtn" type="button" title="Ver el modelo 3D en vista lateral, sin necesidad del marcador">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>
+      <span id="sideViewLabel">Vista lateral</span>
+    </button>
+    <div class="rpmChip"><b id="rpmChipVal">4000</b><span>RPM</span></div>
+  </div>
+</div>
+
+<div id="markerHint">
+  <div class="frame"><i></i><i></i><i></i><i></i></div>
+  <div class="txt">Apunte la cámara al marcador Hiro</div>
+</div>
+
+<div id="lateralHint">Vista lateral libre — arrastra para rotar el equipo</div>
+
+<!-- ===================== BARRA LATERAL (navegación vertical del panel) ===================== -->
+<nav id="sideNav" aria-label="Navegación del panel">
+  <button type="button" data-target="secDatos" title="Datos en tiempo real">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+  </button>
+  <button type="button" data-target="secEquipo" title="Equipo / variables">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+  <button type="button" data-target="secParticula" title="Partícula / sustancia">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+  </button>
+  <button type="button" data-target="secEcuaciones" title="Ecuaciones">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15l3-7 3 5 2-4 2 6" /></svg>
+  </button>
+  <button type="button" data-target="secCalculadora" title="Calculadora">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+  </button>
+</nav>
+
+<a-scene
+  vr-mode-ui="enabled: false"
+  renderer="alpha: true; antialias: true"
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;">
+
+  <!-- iluminación de escena para las piezas metálicas (shader standard) -->
+  <a-entity light="type: ambient; color:#cdd9e0; intensity:0.62"></a-entity>
+  <a-entity light="type: directional; color:#fff3e0; intensity:0.62" position="0.6 1 0.4"></a-entity>
+  <a-entity light="type: directional; color:#bfe9ff; intensity:0.28" position="-0.7 0.4 -0.5"></a-entity>
+  <a-entity light="type: hemisphere; color:#dfe9ee; groundColor:#1a1f22; intensity:0.35"></a-entity>
+
+  <a-marker preset="hiro" id="hiroMarker">
+    <a-entity id="rig" centrifuge-sim position="0 0 0">
+
+      <!-- sombra de contacto (AO simple) -->
+      <a-entity id="contactShadow"
+        geometry="primitive: circle; segments:32"
+        rotation="-90 0 0"
+        material="color:#000; shader:flat; transparent:true; opacity:0.38; side:double">
+      </a-entity>
+
+      <!-- pies de goma -->
+      <a-entity class="foot" geometry="primitive: cylinder; segmentsRadial:8" material="color:#15171a; shader:standard; metalness:0.1; roughness:0.85"></a-entity>
+      <a-entity class="foot" geometry="primitive: cylinder; segmentsRadial:8" material="color:#15171a; shader:standard; metalness:0.1; roughness:0.85"></a-entity>
+      <a-entity class="foot" geometry="primitive: cylinder; segmentsRadial:8" material="color:#15171a; shader:standard; metalness:0.1; roughness:0.85"></a-entity>
+      <a-entity class="foot" geometry="primitive: cylinder; segmentsRadial:8" material="color:#15171a; shader:standard; metalness:0.1; roughness:0.85"></a-entity>
+
+      <!-- carcasa / motor (estática) -->
+      <a-entity id="baseHousing"
+        geometry="primitive: cylinder; radius:0.17; height:0.025; segmentsRadial:36"
+        material="color:#23282c; shader:standard; metalness:0.45; roughness:0.5">
+      </a-entity>
+      <a-entity id="baseFlange"
+        geometry="primitive: torus; segmentsTubular:36"
+        material="color:#cfd6db; shader:standard; metalness:0.85; roughness:0.2">
+      </a-entity>
+
+      <!-- rejillas de ventilación del motor -->
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+      <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
+
+      <!-- testigos / placa -->
+      <a-entity id="brandPlate"
+        text="value: UNIDAD III · CENTRIFUGACIÓN; color:#ff8a00; align:center; width:0.6; baseline:center; shader:msdf">
+      </a-entity>
+      <a-entity id="statusBezel"
+        geometry="primitive: torus; segmentsTubular:20"
+        material="color:#0a0c0d; shader:standard; metalness:0.3; roughness:0.6">
+      </a-entity>
+      <a-entity id="statusLight"
+        geometry="primitive: sphere; segmentsWidth:10; segmentsHeight:10"
+        material="color:#00e5c7; shader:flat; transparent:true; opacity:0.8"
+        light="type: point; color:#00e5c7; intensity:0.4; distance:0.3">
+      </a-entity>
+
+      <!-- eje central (referencia, estático) -->
+      <a-entity id="shaftAxle"
+        geometry="primitive: cylinder; radius:0.003; height:0.3; segmentsRadial:10"
+        material="color:#9aa3ad; shader:standard; metalness:0.75; roughness:0.3">
+      </a-entity>
+
+      <!-- escudo exterior estático (campana de seguridad transparente) -->
+      <a-entity id="outerShield"
+        geometry="primitive: cylinder; radius: 0.17; height: 0.23; openEnded: true; segmentsRadial: 32"
+        material="color:#dff3ff; opacity:0.045; transparent:true; side:double; shader:flat">
+      </a-entity>
+
+      <!-- grupo ROTOR: todo lo que gira visualmente con omega -->
+      <a-entity id="drumRotor">
+
+        <a-entity id="rotorFloor"
+          geometry="primitive: cylinder; height:0.004; segmentsRadial:28"
+          material="color:#aab2b8; shader:standard; metalness:0.65; roughness:0.4">
+        </a-entity>
+
+        <a-entity id="hubCone"
+          geometry="primitive: cone; segmentsRadial:14"
+          material="color:#b9c0c5; shader:standard; metalness:0.8; roughness:0.3">
+        </a-entity>
+
+        <a-entity id="drumMesh"
+          geometry="primitive: cylinder; radius: 0.15; height: 0.2; openEnded: true; segmentsRadial: 28"
+          material="color:#8fd6f2; opacity:0.12; transparent:true; side:double; shader:flat">
+        </a-entity>
+
+        <a-entity id="basketMesh"
+          geometry="primitive: cylinder; radius: 0.15; height: 0.2; openEnded: true; segmentsRadial: 22; segmentsHeight:10"
+          material="color:#cfd6db; shader:standard; metalness:0.6; roughness:0.4; wireframe:true; wireframeLinewidth:1">
+        </a-entity>
+
+        <a-entity id="topRing"
+          geometry="primitive: torus; radius:0.15; radiusTubular:0.003; segmentsTubular:28"
+          material="color:#d7dde1; shader:standard; metalness:0.88; roughness:0.18"
+          rotation="90 0 0">
+        </a-entity>
+        <a-entity id="bottomRing"
+          geometry="primitive: torus; radius:0.15; radiusTubular:0.003; segmentsTubular:28"
+          material="color:#d7dde1; shader:standard; metalness:0.88; roughness:0.18"
+          rotation="90 0 0">
+        </a-entity>
+
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+        <a-entity class="strut" geometry="primitive: cylinder; radius:0.0015; height:0.2" material="color:#b6bdc2; shader:standard; metalness:0.7; roughness:0.35"></a-entity>
+
+        <!-- testigo visual de giro (asimétrico, evidencia la rotación del rotor) -->
+        <a-entity id="rimArrow"
+          geometry="primitive: box; width:0.015; height:0.015; depth:0.03"
+          material="color:#ff8a00; shader:standard; metalness:0.3; roughness:0.4; emissive:#ff8a00; emissiveIntensity:0.25">
+        </a-entity>
+
+        <!-- tapa transparente -->
+        <a-entity id="lidTop"
+          geometry="primitive: cylinder; openEnded:false; segmentsRadial:28"
+          material="color:#cdeaf5; opacity:0.16; transparent:true; side:double; shader:flat">
+        </a-entity>
+        <a-entity id="lidHandle"
+          geometry="primitive: cylinder; segmentsRadial:14"
+          material="color:#ff8a00; shader:standard; metalness:0.4; roughness:0.4">
+        </a-entity>
+      </a-entity>
+
+      <!-- fases (geometría radialmente simétrica, no requiere rotar) -->
+      <a-entity id="fluidMesh"
+        geometry="primitive: cylinder; radius: 0.144; height: 0.2; openEnded: false; segmentsRadial: 20"
+        material="color:#1d6f8c; opacity:0.09; transparent:true; shader:flat">
+      </a-entity>
+      <a-entity id="liquidSurfaceRing"
+        geometry="primitive: torus; segmentsTubular:24"
+        material="color:#7fe3d4; opacity:0.3; transparent:true; shader:flat">
+      </a-entity>
+
+      <a-entity id="particleHolder"></a-entity>
+
+    </a-entity>
+  </a-marker>
+
+  <!-- Contenedor estático usado por la "vista lateral": cuando se activa,
+       el nodo #rig se traslada aquí (dejando de depender del tracking del
+       marcador) y se posiciona con un ángulo lateral fijo, rotable con el
+       dedo/mouse. Al desactivar, #rig vuelve a #hiroMarker. -->
+  <a-entity id="staticViewHolder" visible="false" position="0 -0.02 -0.42" rotation="8 35 0"></a-entity>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<!-- ===================== PANEL DE CONTROL ===================== -->
+<div id="panel">
+
+  <div id="handleRow">
+    <button id="pauseBtn">
+      <svg class="icon icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+      <svg class="icon icon-play" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M7 4l13 8-13 8V4z"/></svg>
+      <span id="pauseLabel">Pausa</span>
+    </button>
+    <button id="resetBtn" title="Reiniciar partículas">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
+      Reiniciar
+    </button>
+    <button id="panelToggle" title="Mostrar/ocultar controles">
+      <svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+      <span id="panelToggleLabel">Ocultar</span>
+    </button>
+  </div>
+
+  <div id="panelBody">
+
+    <div id="panelScroll">
+
+    <!-- ============ SECCIÓN: DATOS EN TIEMPO REAL ============ -->
+    <section class="panelSection" id="secDatos">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
+        Datos en tiempo real
+      </div>
+      <div id="readouts">
+        <div class="gauge">
+          <div class="lab">ω angular</div>
+          <div class="val" id="omegaVal">0.000</div>
+          <div class="unit">rad/s</div>
+        </div>
+        <div class="gauge">
+          <div class="lab">Factor G</div>
+          <div class="val" id="gVal">0.000</div>
+          <div class="unit">adimensional</div>
+        </div>
+        <div class="gauge">
+          <div class="lab">v migración</div>
+          <div class="val" id="vtVal">0.000</div>
+          <div class="unit">mm/s</div>
+        </div>
+      </div>
+      <div id="estado"><span class="dot"></span> Estado: <b id="estadoTxt">—</b></div>
+      <button id="repeatBtn" type="button" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7"/><path d="M3 21v-6h6"/></svg>
+        Repetir simulación
+      </button>
+    </section>
+
+    <!-- ============ SECCIÓN: EQUIPO / VARIABLES DEL SIMULADOR ============ -->
+    <section class="panelSection" id="secEquipo">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Equipo / variables principales
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="name">Velocidad angular (N)</span>
+          <span class="live"><span id="rpmLive">4000</span> RPM</span>
+        </div>
+        <div class="ctrl-row">
+          <input type="range" id="rpmSlider" min="500" max="12000" step="100" value="4000">
+          <input type="number" id="rpmInput" class="numBox" min="500" max="12000" step="100" value="4000">
+        </div>
+        <div class="rangeNote">Rango admitido: <b>500 – 12 000 RPM</b></div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="name">Radio del tambor (r)</span>
+          <span class="live"><span id="rLive">0.15</span> m</span>
+        </div>
+        <div class="ctrl-row">
+          <input type="range" id="rSlider" min="0.05" max="0.50" step="0.01" value="0.15">
+          <input type="number" id="rInput" class="numBox" min="0.05" max="0.50" step="0.01" value="0.15">
+        </div>
+        <div class="rangeNote">Rango admitido: <b>0.05 – 0.50 m</b></div>
+      </div>
+
+      <div id="advToggle">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Parámetros avanzados (μ)
+        <svg class="icon chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0;margin-left:5px;"><path d="M6 9l6 6 6-6"/></svg>
+      </div>
+      <div id="advNote">Auxiliar del fluido — no es variable obligatoria del taller</div>
+      <div id="advPanel">
+        <div class="ctrl secondary">
+          <div class="ctrl-head">
+            <span class="name">Viscosidad (μ)</span>
+            <span class="live"><span id="muLive">1.0</span> mPa·s</span>
+          </div>
+          <div class="ctrl-row">
+            <input type="range" id="muSlider" min="0.1" max="500" step="0.1" value="1.0">
+            <input type="number" id="muInput" class="numBox" min="0.1" max="500" step="0.1" value="1.0">
+          </div>
+          <div class="rangeNote">Rango admitido: <b>0.1 – 500 mPa·s</b> (0.1 ≈ agua tibia · 500 ≈ jarabe espeso)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SECCIÓN: PARTÍCULA / SUSTANCIA SÓLIDA ============ -->
+    <section class="panelSection" id="secParticula">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+        Partícula / sustancia sólida
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="name">Δρ = ρp − ρf</span>
+          <span class="live"><span id="dRhoLive">600</span> kg/m³</span>
+        </div>
+        <div class="ctrl-row">
+          <input type="range" id="dRhoSlider" min="-1000" max="2000" step="10" value="600">
+          <input type="number" id="dRhoInput" class="numBox" min="-1000" max="2000" step="10" value="600">
+        </div>
+        <div class="rangeNote">Rango admitido: <b>−1000 – 2000 kg/m³</b> (negativo = partícula flota hacia el eje)</div>
+      </div>
+
+      <div class="ctrl secondary">
+        <div class="ctrl-head">
+          <span class="name">Diámetro (d<sub>p</sub>)</span>
+          <span class="live"><span id="dpLive">10</span> µm</span>
+        </div>
+        <div class="ctrl-row">
+          <input type="range" id="dpSlider" min="1" max="200" step="1" value="10">
+          <input type="number" id="dpInput" class="numBox" min="1" max="200" step="1" value="10">
+        </div>
+        <div class="rangeNote">Rango admitido: <b>1 – 200 µm</b></div>
+      </div>
+      <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); margin:-2px 0 4px;">
+        El tamaño visual de la partícula en el simulador AR escala con d<sub>p</sub>.
+      </div>
+    </section>
+
+    <!-- ============ SECCIÓN: ECUACIONES GOBERNANTES ============ -->
+    <section class="panelSection" id="secEcuaciones">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15l3-7 3 5 2-4 2 6" /></svg>
+        Ecuaciones gobernantes
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">1 · Velocidad angular</div>
+        <div class="eqFormula">
+          <span>ω</span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">2π · N</span><span class="den">60</span></span>
+        </div>
+        <div class="eqDesc">N = velocidad de rotación del tambor (RPM) → ω resulta en rad/s.</div>
+        <div class="eqRange">N admitido en este taller: 500 – 12 000 RPM</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">2 · Factor de separación centrífugo</div>
+        <div class="eqFormula">
+          <span>G</span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">ω<sup>2</sup> · r</span><span class="den">g</span></span>
+        </div>
+        <div class="eqDesc">Adimensional; compara la aceleración centrífuga con la gravedad. g = 9.81 m/s² (constante).</div>
+        <div class="eqRange">r admitido: 0.05 – 0.50 m</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">3 · Velocidad terminal de migración (Stokes-centrífuga)</div>
+        <div class="eqFormula">
+          <span>v<sub>t</sub></span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">d<sub>p</sub><sup>2</sup> · (ρ<sub>p</sub> − ρ<sub>f</sub>) · ω<sup>2</sup> · r</span><span class="den">18 · μ</span></span>
+        </div>
+        <div class="eqDesc">v<sub>t</sub> &gt; 0: sedimentación hacia la pared del tambor · v<sub>t</sub> &lt; 0: flotación hacia el eje. Válida en régimen laminar (Re<sub>p</sub> &lt; 0.5, ver ecuación 5).</div>
+        <div class="eqRange">Δρ admitido: −1000 – 2000 kg/m³ · d<sub>p</sub> admitido: 1 – 200 µm</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">4 · Caída de presión radial en la fase líquida</div>
+        <div class="eqFormula">
+          <span>ΔP</span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">ρ<sub>f</sub> · ω<sup>2</sup> · (r<sub>2</sub><sup>2</sup> − r<sub>1</sub><sup>2</sup>)</span><span class="den">2</span></span>
+        </div>
+        <div class="eqDesc">Presión hidrostática generada por el campo centrífugo entre dos radios r₁ (interior) y r₂ (exterior) de la columna de líquido — análogo centrífugo de ΔP = ρ·g·h.</div>
+        <div class="eqRange">r₁, r₂ dentro del radio del tambor: 0.05 – 0.50 m</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">5 · Número de Reynolds de partícula</div>
+        <div class="eqFormula">
+          <span>Re<sub>p</sub></span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">ρ<sub>f</sub> · |v<sub>t</sub>| · d<sub>p</sub></span><span class="den">μ</span></span>
+        </div>
+        <div class="eqDesc">Verifica si aplica la Ley de Stokes: se requiere Re<sub>p</sub> &lt; 0.5 (régimen laminar). Con Re<sub>p</sub> mayor, v<sub>t</sub> queda sobreestimada y haría falta un coeficiente de arrastre corregido.</div>
+        <div class="eqRange">Calculado con los mismos μ, d<sub>p</sub> y ρ<sub>f</sub> del taller.</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">6 · Tiempo de sedimentación</div>
+        <div class="eqFormula">
+          <span>t</span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">18 · μ</span><span class="den">d<sub>p</sub><sup>2</sup> · Δρ · ω<sup>2</sup></span></span>
+          <span class="eqSign">·</span>
+          <span class="eqLn">ln<span class="arg">(r<sub>o</sub> / r<sub>i</sub>)</span></span>
+        </div>
+        <div class="eqDesc">Integración exacta de la ecuación de Stokes-centrífuga entre el radio interior de la partícula r<sub>i</sub> y el radio de la pared r<sub>o</sub>. Es el tiempo mínimo teórico de residencia para lograr la separación completa de esa partícula.</div>
+        <div class="eqRange">En este simulador: r<sub>i</sub> = 0.10·r · r<sub>o</sub> = 0.93·r</div>
+      </div>
+
+      <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); text-align:center; margin-top:2px;">
+        Referencia: McCabe, Smith &amp; Harriott / Geankoplis — Operaciones Unitarias.
+      </div>
+    </section>
+
+    <!-- ============ SECCIÓN: CALCULADORA DE CENTRIFUGACIÓN ============ -->
+    <section class="panelSection" id="secCalculadora">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue)"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+        Calculadora de centrifugación
+      </div>
+
+      <div class="calcGrid">
+        <div class="calcField">
+          <label>ρ<sub>p</sub> — densidad partícula</label>
+          <input type="number" id="c_rhoP" value="1600" min="100" max="20000" step="10">
+          <span class="unit">kg/m³ · rango 100–20 000</span>
+        </div>
+        <div class="calcField">
+          <label>ρ<sub>f</sub> — densidad fluido</label>
+          <input type="number" id="c_rhoF" value="1000" min="100" max="5000" step="10">
+          <span class="unit">kg/m³ · rango 100–5000</span>
+        </div>
+        <div class="calcField">
+          <label>d<sub>p</sub> — diámetro partícula</label>
+          <input type="number" id="c_dp" value="10" min="0.1" max="5000" step="0.1">
+          <span class="unit">µm · rango 0.1–5000</span>
+        </div>
+        <div class="calcField">
+          <label>N — velocidad de rotación</label>
+          <input type="number" id="c_rpm" value="4000" min="100" max="50000" step="100">
+          <span class="unit">RPM · rango 100–50 000</span>
+        </div>
+        <div class="calcField">
+          <label>r — radio del tambor</label>
+          <input type="number" id="c_r" value="0.15" min="0.01" max="2" step="0.01">
+          <span class="unit">m · rango 0.01–2</span>
+        </div>
+        <div class="calcField">
+          <label>μ — viscosidad fluido</label>
+          <input type="number" id="c_mu" value="1.0" min="0.001" max="10000" step="0.1">
+          <span class="unit">mPa·s · rango 0.001–10 000</span>
+        </div>
+      </div>
+      <p class="calcNote" style="margin-top:-3px; margin-bottom:9px;">
+        Estos campos aceptan cualquier valor dentro del rango indicado; no están limitados a las mismas cotas de los sliders del simulador AR (esta calculadora es de propósito general).
+      </p>
+
+      <button id="calcBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Calcular parámetros
+      </button>
+
+      <div id="calcResults">
+        <div class="calcOut">
+          <div class="co-lab">ω angular</div>
+          <div class="co-val" id="co_omega">—</div>
+          <div class="co-unit">rad/s</div>
+        </div>
+        <div class="calcOut">
+          <div class="co-lab">Factor G</div>
+          <div class="co-val" id="co_G">—</div>
+          <div class="co-unit">adimensional</div>
+        </div>
+        <div class="calcOut">
+          <div class="co-lab">Δρ</div>
+          <div class="co-val" id="co_dRho">—</div>
+          <div class="co-unit">kg/m³</div>
+        </div>
+        <div class="calcOut">
+          <div class="co-lab">v<sub>t</sub> migración</div>
+          <div class="co-val" id="co_vt">—</div>
+          <div class="co-unit">mm/s</div>
+        </div>
+        <div class="calcOut" style="grid-column:1/-1">
+          <div class="co-lab">Re partícula (verificación Stokes)</div>
+          <div class="co-val" id="co_Re">—</div>
+          <div class="co-unit">adim · Stokes válido si Re &lt; 0.5</div>
+        </div>
+        <div class="calcOut highlight" style="grid-column:1/-1">
+          <div class="co-lab">⏱ Tiempo de sedimentación estimado</div>
+          <div class="co-val" id="co_tsed">—</div>
+          <div class="co-unit" id="co_tsed_unit">s</div>
+        </div>
+      </div>
+      <div id="calcError" style="display:none; color:#ff6b6b; font-size:10.5px; text-align:center; margin-top:6px;"></div>
+      <p class="calcNote">
+        t<sub>sed</sub> se calcula integrando la ec. de Stokes-centrífuga desde r<sub>i</sub> hasta r<sub>o</sub>:<br>
+        t = [18μ / (d<sub>p</sub>² · Δρ · ω²)] · ln(r<sub>o</sub> / r<sub>i</sub>)
+      </p>
+    </section>
+
+    </div><!-- /panelScroll -->
+  </div>
+</div>
+
+<script>
+(function(){
+
+  // ---------------- Constante física fija ----------------
+  var G_GRAV = 9.81;        // m/s2
+
+  // ---------------- Escalas de visualización -----------------
+  // La rotación visual del rotor y el desplazamiento radial de las
+  // partículas en pantalla están ligados matemáticamente a omega y v_t
+  // reales mediante un único factor de escala (SPEED_VIS_SCALE), igual
+  // para ambos movimientos. Así, si una partícula tiene una v_t real
+  // mayor que otra, también se verá moverse más rápido en pantalla,
+  // en la misma proporción (no hay recorte/clamp que distorsione la
+  // relación entre partículas). Los valores numéricos del panel
+  // (omega, G, v_t) siempre corresponden al cálculo físico exacto.
+  var ANGULAR_VIS_SCALE = 80;     // divide a omega real para obtener spin visible
+  var SPEED_VIS_SCALE   = 0.12;   // escala la v_t real a velocidad visual de pantalla
+  var RADIAL_VIS_MIN    = 0.005;  // velocidad visual mínima (m/s) cuando hay separación,
+                                  // para que siempre se note movimiento (≈ 25 s a r=0.15)
+  var RADIAL_VIS_MAX    = 0.022;  // velocidad visual máxima (m/s), evita que sea instantáneo
+  var N_PARTICLES = 18;           // partículas visuales de la sustancia activa
+  var N_STRUTS = 6, N_FEET = 4, N_VENTS = 10;
+
+  // tamaño visual de partícula: escala real con d_p (µm), acotado a un
+  // rango perceptible en AR (1 µm -> esfera mínima, 200 µm -> máxima)
+  var PARTICLE_VIS_MIN = 0.004;   // m, radio visual mínimo
+  var PARTICLE_VIS_MAX = 0.016;   // m, radio visual máximo
+  var DP_MIN = 1, DP_MAX = 200;   // rango de los sliders de d_p (µm)
+
+  var SUBSTANCE_COLOR = '#ff8a00';
+
+  // ---------------- Estado global de simulación ---------------
+  var SIM = {
+    paused: false,
+    finished: false,           // true cuando todas las partículas ya llegaron a su destino
+    substance: null            // { dRho, dp_um, color, particles:[{radius,angle,y,el,arrived}], accumulation, lastSign }
+  };
+
+  // ---------------- DOM refs -----------------------------------
+  var rpmSlider  = document.getElementById('rpmSlider');
+  var rSlider    = document.getElementById('rSlider');
+  var muSlider   = document.getElementById('muSlider');
+  var dRhoSlider = document.getElementById('dRhoSlider');
+  var dpSlider   = document.getElementById('dpSlider');
+
+  var rpmInput   = document.getElementById('rpmInput');
+  var rInput     = document.getElementById('rInput');
+  var muInput    = document.getElementById('muInput');
+  var dRhoInput  = document.getElementById('dRhoInput');
+  var dpInput    = document.getElementById('dpInput');
+
+  var rpmLive  = document.getElementById('rpmLive');
+  var rLive    = document.getElementById('rLive');
+  var muLive   = document.getElementById('muLive');
+  var dRhoLive = document.getElementById('dRhoLive');
+  var dpLive   = document.getElementById('dpLive');
+  var rpmChipVal = document.getElementById('rpmChipVal');
+
+  var omegaVal = document.getElementById('omegaVal');
+  var gVal     = document.getElementById('gVal');
+  var vtVal    = document.getElementById('vtVal');
+  var estadoTxt= document.getElementById('estadoTxt');
+  var estadoBox= document.getElementById('estado');
+
+  var pauseBtn = document.getElementById('pauseBtn');
+  var pauseLabel = document.getElementById('pauseLabel');
+  var resetBtn = document.getElementById('resetBtn');
+  var repeatBtn = document.getElementById('repeatBtn');
+  var panelToggle = document.getElementById('panelToggle');
+  var panelToggleLabel = document.getElementById('panelToggleLabel');
+  var panelBody = document.getElementById('panelBody');
+  var panelScroll = document.getElementById('panelScroll');
+  var advToggle = document.getElementById('advToggle');
+  var advPanel = document.getElementById('advPanel');
+  var markerHint = document.getElementById('markerHint');
+  var sideNavBtns = document.querySelectorAll('#sideNav button');
+
+  var sideViewBtn = document.getElementById('sideViewBtn');
+  var sideViewLabel = document.getElementById('sideViewLabel');
+  var lateralHint = document.getElementById('lateralHint');
+  var staticViewHolder = document.getElementById('staticViewHolder');
+  var hiroMarkerEl = document.getElementById('hiroMarker');
+  var sceneEl = document.querySelector('a-scene');
+
+  // ---------------- Cálculo de variables físicas ----------------
+  function computeOmegaG(rpm, r){
+    var omega = (rpm * 2 * Math.PI) / 60;             // rad/s
+    var G = (omega * omega * r) / G_GRAV;                // adimensional
+    return { omega: omega, G: G };
+  }
+
+  function computeVt(omega, r, dRho, dp_m, mu_pas){
+    return (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas); // m/s, con signo
+  }
+
+  function currentEquipmentInputs(){
+    return {
+      rpm: parseFloat(rpmSlider.value),
+      r:   parseFloat(rSlider.value),
+      mu_mpas: parseFloat(muSlider.value)
+    };
+  }
+
+  function updateReadouts(){
+    var eq = currentEquipmentInputs();
+    var og = computeOmegaG(eq.rpm, eq.r);
+
+    omegaVal.textContent = og.omega.toFixed(3);
+    gVal.textContent = og.G.toFixed(3);
+
+    var sub = SIM.substance;
+    if (sub){
+      var dp_m = sub.dp_um * 1e-6;
+      var mu_pas = eq.mu_mpas * 1e-3;
+      var vt = computeVt(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
+      vtVal.textContent = (vt*1000).toFixed(3); // mm/s
+    } else {
+      vtVal.textContent = '0.000';
+    }
+
+    rpmLive.textContent = eq.rpm.toFixed(0);
+    rpmChipVal.textContent = eq.rpm.toFixed(0);
+    rLive.textContent = eq.r.toFixed(2);
+    muLive.textContent = eq.mu_mpas.toFixed(1);
+
+    syncNumberFromSlider(rpmSlider, rpmInput);
+    syncNumberFromSlider(rSlider, rInput);
+    syncNumberFromSlider(muSlider, muInput);
+    if (sub){
+      syncNumberFromSlider(dRhoSlider, dRhoInput);
+      syncNumberFromSlider(dpSlider, dpInput);
+    }
+
+    var estado, color;
+    if (SIM.finished){
+      estado = 'Simulación completa · todas las partículas alcanzaron su destino';
+      color = '#7fe3d4';
+    } else if (!sub || Math.abs(sub.dRho) < 5){
+      estado = 'Suspensión neutra · sin separación neta (Δρ ≈ 0)';
+      color = '#8fa8b8';
+    } else if (sub.dRho > 0){
+      estado = 'Sedimentación · partícula migra hacia la pared (ρp > ρf)';
+      color = '#c9763a';
+    } else {
+      estado = 'Flotación / cremado · partícula migra al centro (ρp < ρf)';
+      color = '#f2d680';
+    }
+    estadoTxt.textContent = estado;
+    estadoTxt.style.color = color;
+    estadoBox.style.setProperty('--estado-color', color);
+
+    return { eq: eq, og: og };
+  }
+
+  // ---------------- Sincronización slider <-> input numérico ----------------
+  function syncNumberFromSlider(slider, numInput){
+    if (document.activeElement !== numInput){
+      numInput.value = slider.value;
+    }
+  }
+
+  function clamp(val, min, max){
+    return Math.max(min, Math.min(max, val));
+  }
+
+  function bindSliderNumberPair(slider, numInput, onChange){
+    slider.addEventListener('input', function(){
+      numInput.value = slider.value;
+      onChange();
+    });
+    numInput.addEventListener('input', function(){
+      var v = parseFloat(numInput.value);
+      if (!isNaN(v)){
+        slider.value = clamp(v, parseFloat(slider.min), parseFloat(slider.max));
+        onChange();
+      }
+    });
+    numInput.addEventListener('blur', function(){
+      var min = parseFloat(numInput.min), max = parseFloat(numInput.max);
+      var v = parseFloat(numInput.value);
+      if (isNaN(v)) v = parseFloat(slider.value);
+      v = clamp(v, min, max);
+      numInput.value = v;
+      slider.value = v;
+      onChange();
+    });
+    numInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') numInput.blur();
+    });
+  }
+
+  // ---------------- Geometría del tambor y del rotor (depende de r) ----------------
+  function updateDrumGeometry(r){
+    var h = r * 1.3;
+
+    var drum  = document.getElementById('drumMesh');
+    var basket= document.getElementById('basketMesh');
+    var fluid = document.getElementById('fluidMesh');
+    var surf  = document.getElementById('liquidSurfaceRing');
+    var topRing = document.getElementById('topRing');
+    var bottomRing = document.getElementById('bottomRing');
+    var rimArrow = document.getElementById('rimArrow');
+    var shaft = document.getElementById('shaftAxle');
+    var base = document.getElementById('baseHousing');
+    var flange = document.getElementById('baseFlange');
+    var light = document.getElementById('statusLight');
+    var bezel = document.getElementById('statusBezel');
+    var plate = document.getElementById('brandPlate');
+    var shield = document.getElementById('outerShield');
+    var rotorFloor = document.getElementById('rotorFloor');
+    var hub = document.getElementById('hubCone');
+    var lid = document.getElementById('lidTop');
+    var lidHandle = document.getElementById('lidHandle');
+    var shadow = document.getElementById('contactShadow');
+
+    drum.setAttribute('geometry', 'primitive: cylinder; radius: ' + r + '; height: ' + h + '; openEnded: true; segmentsRadial: 28');
+    basket.setAttribute('geometry', 'primitive: cylinder; radius: ' + (r*1.001) + '; height: ' + (h*0.999) + '; openEnded: true; segmentsRadial: 22; segmentsHeight: 10');
+    fluid.setAttribute('geometry', 'primitive: cylinder; radius: ' + (r*0.96) + '; height: ' + h + '; openEnded: false; segmentsRadial: 20');
+    if (SIM.substance) updateSubstanceRingGeometry(SIM.substance, r);
+
+    var tube = r*0.018;
+    topRing.setAttribute('geometry', 'primitive: torus; radius:' + r + '; radiusTubular:' + tube + '; segmentsTubular:28');
+    topRing.setAttribute('position', '0 ' + (h/2) + ' 0');
+    bottomRing.setAttribute('geometry', 'primitive: torus; radius:' + r + '; radiusTubular:' + tube + '; segmentsTubular:28');
+    bottomRing.setAttribute('position', '0 ' + (-h/2) + ' 0');
+
+    var struts = document.querySelectorAll('.strut');
+    for (var i=0; i<struts.length; i++){
+      var ang = i * (2*Math.PI/N_STRUTS);
+      var sx = r*Math.cos(ang);
+      var sz = r*Math.sin(ang);
+      struts[i].setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.012) + '; height:' + h);
+      struts[i].setAttribute('position', sx + ' 0 ' + sz);
+    }
+
+    rimArrow.setAttribute('geometry', 'primitive: box; width:' + (r*0.1) + '; height:' + (r*0.1) + '; depth:' + (r*0.22));
+    rimArrow.setAttribute('position', (r*1.05) + ' ' + (h/2) + ' 0');
+
+    var lidH = r*0.035;
+    lid.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.97) + '; height:' + lidH + '; openEnded:false; segmentsRadial:28');
+    var lidY = (h/2) + (lidH/2) + 0.002;
+    lid.setAttribute('position', '0 ' + lidY + ' 0');
+    var handleH = r*0.09;
+    lidHandle.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.05) + '; height:' + handleH + '; segmentsRadial:14');
+    lidHandle.setAttribute('position', '0 ' + (lidY + (lidH/2) + (handleH/2)) + ' 0');
+
+    rotorFloor.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.92) + '; height:' + (r*0.015) + '; segmentsRadial:28');
+    rotorFloor.setAttribute('position', '0 ' + (-(h/2) + r*0.02) + ' 0');
+    var hubH = r*0.1;
+    hub.setAttribute('geometry', 'primitive: cone; radiusBottom:' + (r*0.025) + '; radiusTop:' + (r*0.065) + '; height:' + hubH + '; segmentsRadial:14');
+    hub.setAttribute('position', '0 ' + (-(h/2) + r*0.02 + hubH*0.45) + ' 0');
+
+    var shaftH = h*1.05;
+    shaft.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.018) + '; height:' + shaftH + '; segmentsRadial:10');
+    shaft.setAttribute('position', '0 0 0');
+
+    shield.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*1.15) + '; height:' + (h*1.12) + '; openEnded: true; segmentsRadial: 32');
+
+    surf.setAttribute('geometry', 'primitive: torus; radius:' + (r*0.93) + '; radiusTubular:' + (r*0.006) + '; segmentsTubular:24');
+    surf.setAttribute('rotation', '90 0 0');
+    surf.setAttribute('position', '0 ' + (h*0.46) + ' 0');
+
+    var baseR = r*1.18;
+    var baseH = r*0.20;
+    base.setAttribute('geometry', 'primitive: cylinder; radius:' + baseR + '; height:' + baseH + '; segmentsRadial:36');
+    var baseY = -(h/2) - (baseH/2) - 0.004;
+    base.setAttribute('position', '0 ' + baseY + ' 0');
+    var baseTopY = baseY + baseH/2;
+
+    flange.setAttribute('geometry', 'primitive: torus; radius:' + (baseR*0.985) + '; radiusTubular:' + (r*0.012) + '; segmentsTubular:36');
+    flange.setAttribute('position', '0 ' + (baseTopY) + ' 0');
+    flange.setAttribute('rotation', '90 0 0');
+
+    var feet = document.querySelectorAll('.foot');
+    var footR = r*0.035, footH = r*0.05;
+    for (var f=0; f<feet.length; f++){
+      var fang = f*(2*Math.PI/N_FEET) + Math.PI/4;
+      var fx = baseR*0.78*Math.cos(fang);
+      var fz = baseR*0.78*Math.sin(fang);
+      feet[f].setAttribute('geometry', 'primitive: cylinder; radius:' + footR + '; height:' + footH + '; segmentsRadial:8');
+      feet[f].setAttribute('position', fx + ' ' + (baseY - baseH/2 - footH/2) + ' ' + fz);
+    }
+
+    var vents = document.querySelectorAll('.vent');
+    var ventW = r*0.05, ventH = baseH*0.55, ventD = r*0.012;
+    for (var vIdx=0; vIdx<vents.length; vIdx++){
+      var vang = vIdx*(2*Math.PI/N_VENTS);
+      var vx = baseR*0.985*Math.cos(vang);
+      var vz = baseR*0.985*Math.sin(vang);
+      vents[vIdx].setAttribute('geometry', 'primitive: box; width:' + ventW + '; height:' + ventH + '; depth:' + ventD);
+      vents[vIdx].setAttribute('position', vx + ' ' + baseTopY + ' ' + vz);
+      vents[vIdx].setAttribute('rotation', '0 ' + (-vang*180/Math.PI) + ' 0');
+    }
+
+    plate.setAttribute('position', '0 ' + (baseY + 0.001) + ' ' + (baseR*0.92));
+    plate.setAttribute('scale', (r*0.55) + ' ' + (r*0.55) + ' ' + (r*0.55));
+
+    var lightR = r*0.028;
+    light.setAttribute('geometry', 'primitive: sphere; radius:' + lightR + '; segmentsWidth:10; segmentsHeight:10');
+    var lightX = baseR*0.6, lightZ = 0, lightY = baseTopY + lightR + 0.001;
+    light.setAttribute('position', lightX + ' ' + lightY + ' ' + lightZ);
+    bezel.setAttribute('geometry', 'primitive: torus; radius:' + (lightR*1.7) + '; radiusTubular:' + (lightR*0.35) + '; segmentsTubular:20');
+    bezel.setAttribute('position', lightX + ' ' + (lightY-0.001) + ' ' + lightZ);
+    bezel.setAttribute('rotation', '90 0 0');
+
+    shadow.setAttribute('geometry', 'primitive: circle; radius:' + (baseR*1.35) + '; segments:32');
+    shadow.setAttribute('position', '0 ' + (baseY - baseH/2 - footH - 0.003) + ' 0');
+  }
+
+  function limits(r){
+    return { inner: r*0.10, outer: r*0.93, height: r*1.3 };
+  }
+
+  function particleColor(dRho, fallbackColor){
+    if (Math.abs(dRho) < 5) return '#8FA8B8';
+    return fallbackColor;
+  }
+
+  // tamaño visual de la esfera (m) en función real de d_p (µm)
+  function particleVisualRadius(dp_um){
+    var t = clamp((dp_um - DP_MIN) / (DP_MAX - DP_MIN), 0, 1);
+    return PARTICLE_VIS_MIN + t * (PARTICLE_VIS_MAX - PARTICLE_VIS_MIN);
+  }
+
+  function applyParticleSize(sub){
+    var rad = particleVisualRadius(sub.dp_um);
+    for (var i=0;i<sub.particles.length;i++){
+      sub.particles[i].el.setAttribute('geometry', 'primitive: sphere; radius: ' + rad + '; segmentsWidth:10; segmentsHeight:8');
+    }
+  }
+
+  // ---------------- Creación de la sustancia activa ----------------
+  function createSubstance(dRho, dp_um){
+    var sub = {
+      dRho: (typeof dRho === 'number') ? dRho : 600,
+      dp_um: (typeof dp_um === 'number') ? dp_um : 10,
+      color: SUBSTANCE_COLOR,
+      lastSign: 0,
+      accumulation: 0,
+      particles: []
+    };
+    SIM.substance = sub;
+    buildSubstanceParticles(sub);
+    return sub;
+  }
+
+  function buildSubstanceParticles(sub){
+    var holder = document.getElementById('particleHolder');
+    var eq = currentEquipmentInputs();
+    var lim = limits(eq.r);
+    var col = particleColor(sub.dRho, sub.color);
+    var rad = particleVisualRadius(sub.dp_um);
+
+    for (var i=0; i<N_PARTICLES; i++){
+      var el = document.createElement('a-entity');
+      el.setAttribute('geometry', 'primitive: sphere; radius: ' + rad + '; segmentsWidth:10; segmentsHeight:8');
+      el.setAttribute('material', 'color:'+col+'; shader:flat');
+      holder.appendChild(el);
+
+      var radius = lim.inner + Math.random()*(lim.outer-lim.inner)*0.8;
+      var angle = Math.random()*Math.PI*2;
+      var y = (Math.random()-0.5) * lim.height * 0.8;
+
+      var state = { radius: radius, angle: angle, y: y, el: el, arrived: false };
+      sub.particles.push(state);
+      placeParticle(state);
+    }
+
+    var fluidHolder = document.getElementById('rig');
+    var wall = document.createElement('a-entity');
+    wall.setAttribute('geometry', 'primitive: cylinder; openEnded:true; segmentsRadial:28');
+    wall.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
+    fluidHolder.appendChild(wall);
+
+    var core = document.createElement('a-entity');
+    core.setAttribute('geometry', 'primitive: cylinder; openEnded:true; segmentsRadial:16');
+    core.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
+    fluidHolder.appendChild(core);
+
+    sub.wallEl = wall;
+    sub.coreEl = core;
+    updateSubstanceRingGeometry(sub, eq.r);
+  }
+
+  function updateSubstanceRingGeometry(sub, r){
+    var h = r * 1.3;
+    if (sub.wallEl) sub.wallEl.setAttribute('geometry', 'primitive: cylinder; radius: ' + (r*0.97) + '; height: ' + h + '; openEnded: true; segmentsRadial: 28');
+    if (sub.coreEl) sub.coreEl.setAttribute('geometry', 'primitive: cylinder; radius: ' + (r*0.12) + '; height: ' + h + '; openEnded: true; segmentsRadial: 16');
+  }
+
+  function placeParticle(p){
+    var x = p.radius * Math.cos(p.angle);
+    var z = p.radius * Math.sin(p.angle);
+    p.el.object3D.position.set(x, p.y, z);
+  }
+
+  function recolorSubstanceParticles(sub){
+    var col = particleColor(sub.dRho, sub.color);
+    for (var i=0;i<sub.particles.length;i++){
+      sub.particles[i].el.setAttribute('material', 'color:'+col+'; shader:flat');
+    }
+    if (sub.wallEl) sub.wallEl.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
+    if (sub.coreEl) sub.coreEl.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
+  }
+
+  // reinicia las partículas a posiciones aleatorias y las pone a migrar de nuevo
+  function resetSubstanceParticles(sub){
+    var eq = currentEquipmentInputs();
+    var lim = limits(eq.r);
+    for (var i=0;i<sub.particles.length;i++){
+      var p = sub.particles[i];
+      p.radius = lim.inner + Math.random()*(lim.outer-lim.inner)*0.8;
+      p.angle = Math.random()*Math.PI*2;
+      p.y = (Math.random()-0.5) * lim.height * 0.8;
+      p.arrived = false;
+      placeParticle(p);
+    }
+    sub.accumulation = 0;
+    updateSubstanceAccumulationVisual(sub, 0);
+    SIM.finished = false;
+    repeatBtn.hidden = true;
+  }
+
+  function updateSubstanceAccumulationVisual(sub, level){
+    if (!sub.wallEl || !sub.coreEl) return;
+    if (Math.abs(sub.dRho) < 5){
+      sub.wallEl.setAttribute('material', 'opacity', 0);
+      sub.coreEl.setAttribute('material', 'opacity', 0);
+    } else if (sub.dRho > 0){
+      sub.wallEl.setAttribute('material', 'opacity', level*0.85);
+      sub.coreEl.setAttribute('material', 'opacity', 0);
+    } else {
+      sub.coreEl.setAttribute('material', 'opacity', level*0.85);
+      sub.wallEl.setAttribute('material', 'opacity', 0);
+    }
+  }
+
+  // ---------------- Componente A-Frame: motor de la simulación ----------------
+  AFRAME.registerComponent('centrifuge-sim', {
+    init: function(){
+      updateDrumGeometry(parseFloat(rSlider.value));
+      createSubstance(parseFloat(dRhoSlider.value), parseFloat(dpSlider.value));
+      updateReadouts();
+    },
+
+    tick: function(time, timeDelta){
+      if (!timeDelta) return;
+
+      var light = document.getElementById('statusLight');
+      if (SIM.paused){
+        light.setAttribute('material', 'opacity', 0.22);
+        light.setAttribute('light', 'intensity', 0.08);
+      } else {
+        var pulse = 0.5 + 0.4*Math.sin(time/170);
+        light.setAttribute('material', 'opacity', pulse);
+        light.setAttribute('light', 'intensity', 0.15 + pulse*0.4);
+      }
+
+      if (SIM.paused) return;
+
+      var dt = Math.min(timeDelta, 50) / 1000;
+      var eq = currentEquipmentInputs();
+      var mu_pas = eq.mu_mpas * 1e-3;
+      var og = computeOmegaG(eq.rpm, eq.r);
+      var lim = limits(eq.r);
+
+      var angularVis = (og.omega / ANGULAR_VIS_SCALE);
+
+      // El tambor SIEMPRE gira mientras no esté en pausa,
+      // incluso cuando la sedimentación ya terminó.
+      var rotor = document.getElementById('drumRotor');
+      rotor.object3D.rotation.y += angularVis * dt;
+
+      // Las partículas solo migran si la simulación no ha finalizado
+      if (SIM.finished) { updateReadouts(); return; }
+
+      var sub = SIM.substance;
+      if (!sub) { updateReadouts(); return; }
+
+      var dp_m = sub.dp_um * 1e-6;
+      var vt = computeVt(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
+
+      // Velocidad radial visual: escalada de v_t real, con piso y techo
+      // para que siempre sea perceptible pero nunca instantánea.
+      var radialSign = vt >= 0 ? 1 : -1;
+      var radialVis = Math.abs(sub.dRho) >= 5
+        ? radialSign * clamp(Math.abs(vt) * SPEED_VIS_SCALE, RADIAL_VIS_MIN, RADIAL_VIS_MAX)
+        : 0;
+
+      var anyArrived = false;
+      var allArrived = true;
+
+      for (var i=0; i<sub.particles.length; i++){
+        var p = sub.particles[i];
+        if (p.arrived){ continue; }
+
+        p.angle += angularVis * dt;
+
+        if (Math.abs(sub.dRho) >= 5){
+          p.radius += radialVis * dt;
+
+          if (sub.dRho > 0 && p.radius >= lim.outer){
+            p.radius = lim.outer;
+            p.arrived = true;
+            anyArrived = true;
+          } else if (sub.dRho < 0 && p.radius <= lim.inner){
+            p.radius = lim.inner;
+            p.arrived = true;
+            anyArrived = true;
+          }
+        } else {
+          // Δρ ≈ 0: no hay migración neta, la partícula nunca "llega"
+          allArrived = false;
+        }
+
+        p.radius = clamp(p.radius, lim.inner, lim.outer);
+        placeParticle(p);
+
+        if (!p.arrived) allArrived = false;
+      }
+
+      if (anyArrived){
+        sub.accumulation = Math.min(1, sub.accumulation + 0.012);
+        updateSubstanceAccumulationVisual(sub, sub.accumulation);
+      }
+
+      if (allArrived && Math.abs(sub.dRho) >= 5 && !SIM.finished){
+        SIM.finished = true;
+        SIM.paused = true;
+        pauseBtn.classList.add('is-paused');
+        pauseLabel.textContent = 'Reanudar';
+        repeatBtn.hidden = false;
+      }
+
+      updateReadouts();
+    }
+  });
+
+  // ---------------- Eventos de UI: equipo ----------------
+  bindSliderNumberPair(rpmSlider, rpmInput, updateReadouts);
+  bindSliderNumberPair(muSlider, muInput, updateReadouts);
+
+  bindSliderNumberPair(rSlider, rInput, function(){
+    updateDrumGeometry(parseFloat(rSlider.value));
+    updateReadouts();
+  });
+
+  // ---------------- Eventos de UI: partícula / sustancia ----------------
+  bindSliderNumberPair(dRhoSlider, dRhoInput, function(){
+    var sub = SIM.substance;
+    if (!sub) return;
+    var v = parseFloat(dRhoSlider.value);
+    sub.dRho = v;
+    dRhoLive.textContent = v.toFixed(0);
+    var sign = v >= 5 ? 1 : (v <= -5 ? -1 : 0);
+    if (sign !== sub.lastSign){
+      sub.lastSign = sign;
+      recolorSubstanceParticles(sub);
+      resetSubstanceParticles(sub);
+    }
+    updateReadouts();
+  });
+
+  bindSliderNumberPair(dpSlider, dpInput, function(){
+    var sub = SIM.substance;
+    if (!sub) return;
+    var v = parseFloat(dpSlider.value);
+    sub.dp_um = v;
+    dpLive.textContent = v.toFixed(0);
+    applyParticleSize(sub);
+    updateReadouts();
+  });
+
+  // ---------------- Controles de reproducción ----------------
+  pauseBtn.addEventListener('click', function(){
+    SIM.paused = !SIM.paused;
+    pauseBtn.classList.toggle('is-paused', SIM.paused);
+    pauseLabel.textContent = SIM.paused ? 'Reanudar' : 'Pausa';
+  });
+
+  resetBtn.addEventListener('click', function(){
+    if (SIM.substance) resetSubstanceParticles(SIM.substance);
+  });
+
+  repeatBtn.addEventListener('click', function(){
+    if (!SIM.substance) return;
+    resetSubstanceParticles(SIM.substance);
+    SIM.paused = false;
+    pauseBtn.classList.remove('is-paused');
+    pauseLabel.textContent = 'Pausa';
+  });
+
+  // ---------------- Vista lateral (modelo 3D sin marcador) ----------------
+  // Al activarse, el nodo #rig (con todo el equipo y las partículas) se
+  // reubica del interior de <a-marker> al contenedor estático
+  // #staticViewHolder, con un ángulo lateral fijo que puede rotarse con
+  // el dedo o el mouse. La lógica de simulación (centrifuge-sim, tick,
+  // partículas) no cambia: sigue operando sobre el mismo nodo #rig, solo
+  // que ahora su transform ya no depende del tracking AR del marcador.
+  var lateralActive = false;
+  var lateralDrag = { active:false, lastX:0, lastY:0 };
+  var lateralRotation = { x: 8, y: 35 };
+
+  function setStaticHolderRotation(){
+    staticViewHolder.setAttribute('rotation', lateralRotation.x + ' ' + lateralRotation.y + ' 0');
+  }
+
+  sideViewBtn.addEventListener('click', function(){
+    var rig = document.getElementById('rig');
+    lateralActive = !lateralActive;
+    sideViewBtn.classList.toggle('active', lateralActive);
+    sideViewLabel.textContent = lateralActive ? 'Modo AR' : 'Vista lateral';
+    lateralHint.classList.toggle('show', lateralActive);
+
+    if (lateralActive){
+      staticViewHolder.appendChild(rig);
+      staticViewHolder.setAttribute('visible', 'true');
+      setStaticHolderRotation();
+      markerHint.style.opacity = '0';
+      markerHint.style.pointerEvents = 'none';
+    } else {
+      hiroMarkerEl.appendChild(rig);
+      staticViewHolder.setAttribute('visible', 'false');
+      // el listener markerFound/markerLost restaura el aviso del marcador
+      markerHint.style.opacity = '1';
+      markerHint.style.pointerEvents = 'auto';
+    }
+  });
+
+  // arrastrar (mouse/touch) para rotar el equipo en vista lateral
+  function lateralDragStart(x, y){
+    if (!lateralActive) return;
+    lateralDrag.active = true;
+    lateralDrag.lastX = x;
+    lateralDrag.lastY = y;
+  }
+  function lateralDragMove(x, y){
+    if (!lateralActive || !lateralDrag.active) return;
+    var dx = x - lateralDrag.lastX;
+    var dy = y - lateralDrag.lastY;
+    lateralDrag.lastX = x;
+    lateralDrag.lastY = y;
+    lateralRotation.y += dx * 0.35;
+    lateralRotation.x = Math.max(-40, Math.min(60, lateralRotation.x - dy * 0.25));
+    setStaticHolderRotation();
+  }
+  function lateralDragEnd(){ lateralDrag.active = false; }
+
+  sceneEl.addEventListener('mousedown', function(e){ lateralDragStart(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', function(e){ lateralDragMove(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', lateralDragEnd);
+  sceneEl.addEventListener('touchstart', function(e){
+    if (!lateralActive) return;
+    var t = e.touches[0]; lateralDragStart(t.clientX, t.clientY);
+  }, { passive:true });
+  sceneEl.addEventListener('touchmove', function(e){
+    if (!lateralActive) return;
+    var t = e.touches[0]; lateralDragMove(t.clientX, t.clientY);
+  }, { passive:true });
+  sceneEl.addEventListener('touchend', lateralDragEnd);
+
+  panelToggle.addEventListener('click', function(){
+    var collapsed = panelBody.classList.toggle('collapsed');
+    panelToggle.classList.toggle('is-collapsed', collapsed);
+    panelToggleLabel.textContent = collapsed ? 'Controles' : 'Ocultar';
+  });
+
+  advToggle.addEventListener('click', function(){
+    var open = advPanel.classList.toggle('open');
+    advToggle.classList.toggle('open', open);
+  });
+
+  // ---------------- Barra lateral: navegación vertical entre secciones ----------------
+  var sections = Array.prototype.map.call(sideNavBtns, function(btn){
+    return { btn: btn, el: document.getElementById(btn.getAttribute('data-target')) };
+  });
+
+  sideNavBtns.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var target = document.getElementById(btn.getAttribute('data-target'));
+      if (!target) return;
+      if (panelBody.classList.contains('collapsed')){
+        panelBody.classList.remove('collapsed');
+        panelToggle.classList.remove('is-collapsed');
+        panelToggleLabel.textContent = 'Ocultar';
+      }
+      panelScroll.scrollTo({ top: target.offsetTop - 2, behavior: 'smooth' });
+    });
+  });
+
+  function highlightActiveSection(){
+    var scrollPos = panelScroll.scrollTop + 12;
+    var activeEl = sections[0] && sections[0].el;
+    sections.forEach(function(s){
+      if (s.el && s.el.offsetTop <= scrollPos) activeEl = s.el;
+    });
+    sections.forEach(function(s){
+      s.btn.classList.toggle('active', s.el === activeEl);
+    });
+  }
+  panelScroll.addEventListener('scroll', highlightActiveSection);
+  highlightActiveSection();
+
+  // ---------------- Calculadora de centrifugación ----------------
+  var calcBtn = document.getElementById('calcBtn');
+  var calcResults = document.getElementById('calcResults');
+  var calcError   = document.getElementById('calcError');
+
+  calcBtn.addEventListener('click', function(){
+    calcError.style.display = 'none';
+    calcResults.classList.remove('visible');
+
+    var rhoP = parseFloat(document.getElementById('c_rhoP').value);
+    var rhoF = parseFloat(document.getElementById('c_rhoF').value);
+    var dp_um = parseFloat(document.getElementById('c_dp').value);
+    var rpm  = parseFloat(document.getElementById('c_rpm').value);
+    var r    = parseFloat(document.getElementById('c_r').value);
+    var mu_mpas = parseFloat(document.getElementById('c_mu').value);
+
+    if ([rhoP,rhoF,dp_um,rpm,r,mu_mpas].some(function(v){ return isNaN(v) || v <= 0; })){
+      calcError.textContent = 'Por favor ingresa valores positivos en todos los campos.';
+      calcError.style.display = 'block';
+      return;
+    }
+
+    var dRho   = rhoP - rhoF;                        // kg/m³
+    var dp_m   = dp_um * 1e-6;                        // m
+    var mu_pas = mu_mpas * 1e-3;                      // Pa·s
+    var omega  = (rpm * 2 * Math.PI) / 60;            // rad/s
+    var G      = (omega * omega * r) / G_GRAV;        // adim
+
+    var vt = (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas);  // m/s (con signo)
+    var vt_mm = vt * 1000;                            // mm/s
+
+    // Re de partícula para verificar validez de Stokes
+    // Re = rhoF * |vt| * dp / mu
+    var Re = (rhoF * Math.abs(vt) * dp_m) / mu_pas;
+
+    // Tiempo de sedimentación por integración exacta de Stokes-centrífuga:
+    // t = [18μ / (dp² · Δρ · ω²)] · ln(r_o / r_i)
+    // r_i = r*0.10, r_o = r*0.93 (límites del tambor)
+    var r_i = r * 0.10, r_o = r * 0.93;
+    var t_sed_s = null;
+    var t_sed_str = '—', t_sed_unit_str = '';
+    if (Math.abs(dRho) >= 1 && Math.abs(vt) > 1e-15){
+      var K = (18 * mu_pas) / (dp_m*dp_m * Math.abs(dRho) * omega*omega);
+      t_sed_s = K * Math.log(r_o / r_i);
+      // elegir unidad adecuada
+      if (t_sed_s < 60){
+        t_sed_str = t_sed_s.toFixed(3);
+        t_sed_unit_str = 's';
+      } else if (t_sed_s < 3600){
+        t_sed_str = (t_sed_s/60).toFixed(3);
+        t_sed_unit_str = 'min';
+      } else {
+        t_sed_str = (t_sed_s/3600).toFixed(3);
+        t_sed_unit_str = 'h';
+      }
+    } else {
+      t_sed_str = 'Δρ ≈ 0 · sin separación';
+      t_sed_unit_str = '';
+    }
+
+    document.getElementById('co_omega').textContent = omega.toFixed(3);
+    document.getElementById('co_G').textContent     = G.toFixed(3);
+    document.getElementById('co_dRho').textContent  = dRho.toFixed(3);
+    document.getElementById('co_vt').textContent    = vt_mm.toFixed(3);
+    document.getElementById('co_Re').textContent    = Re.toExponential(3);
+    document.getElementById('co_tsed').textContent  = t_sed_str;
+    document.getElementById('co_tsed_unit').textContent = t_sed_unit_str;
+
+    // Aviso si Re > 0.5 (Stokes puede no ser válido)
+    var reBadge = document.getElementById('co_Re');
+    reBadge.style.color = Re < 0.5 ? 'var(--blue)' : '#ffb347';
+
+    calcResults.classList.add('visible');
+  });
+
+  // ---------------- Aviso de detección de marcador ----------------
+  var markerEl = document.getElementById('hiroMarker');
+  markerEl.addEventListener('markerFound', function(){
+    markerHint.style.opacity = '0';
+    markerHint.style.pointerEvents = 'none';
+  });
+  markerEl.addEventListener('markerLost', function(){
+    if (lateralActive) return; // en vista lateral el aviso de marcador permanece oculto
+    markerHint.style.opacity = '1';
+    markerHint.style.pointerEvents = 'auto';
+  });
+
+})();
+</script>
+
+</body>
+</html>

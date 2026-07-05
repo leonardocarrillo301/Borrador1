@@ -410,6 +410,34 @@
   }
   .ctrl.secondary input[type=range]::-webkit-slider-thumb{ border-color: var(--cyan); }
 
+  /* ---------- Indicador automático de régimen de flujo (Re del fluido) ---------- */
+  .ctrl.readout{ cursor:default; }
+  .ctrl.readout .ctrl-head .live{
+    font-weight:700; font-size:11px; letter-spacing:.2px;
+  }
+  .reGauge{ margin-top:4px; padding:0 1px; }
+  .reGaugeTrack{
+    position:relative; height:9px; border-radius:6px; overflow:visible;
+    background: linear-gradient(to right,
+      #3ad19a 0%, #3ad19a 12.5%,
+      #f2c94c 12.5%, #f2c94c 50%,
+      #ef5b5b 50%, #ef5b5b 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.10);
+  }
+  .reGaugeThumb{
+    position:absolute; top:50%; left:0%;
+    width:15px; height:15px; margin-left:-7.5px; margin-top:-7.5px;
+    border-radius:50%;
+    background:#fff; border:2px solid #12181d;
+    box-shadow:0 0 0 3px rgba(255,255,255,.20), 0 1px 3px rgba(0,0,0,.5);
+    transition: left .4s cubic-bezier(.22,.61,.36,1);
+  }
+  .reGaugeLabels{
+    display:flex; justify-content:space-between;
+    font-size:8px; letter-spacing:.3px; text-transform:uppercase;
+    color: var(--text-faint); margin-top:5px;
+  }
+
   input[type=range]::-moz-range-track{
     height:5px; background: linear-gradient(90deg, var(--accent-dim), var(--accent));
     border-radius:3px;
@@ -940,6 +968,29 @@
         <div class="rangeNote">Rango admitido: <b>0.05 – 0.50 m</b></div>
       </div>
 
+      <!-- ---- Indicador automático: régimen de flujo del fluido (Re) ----
+           No es un control: es un "slider" de solo lectura cuyo indicador
+           se mueve solo cada vez que cambias N, r o μ, mostrando en qué
+           régimen (laminar/transición/turbulento) queda el líquido dentro
+           del tambor. Usa el mismo criterio del Re de agitación en tanques
+           (Norwood-Metzner) aplicado al giro del tambor como si fuera un
+           "impulsor" de diámetro D = 2r. -->
+      <div class="ctrl readout" id="reFluidoCtrl">
+        <div class="ctrl-head">
+          <span class="name">Régimen del fluido (Re)</span>
+          <span class="live" id="reFluidoBadge">—</span>
+        </div>
+        <div class="reGauge">
+          <div class="reGaugeTrack">
+            <div class="reGaugeThumb" id="reFluidoThumb"></div>
+          </div>
+          <div class="reGaugeLabels">
+            <span>Laminar</span><span>Transición</span><span>Turbulento</span>
+          </div>
+        </div>
+        <div class="rangeNote">Re = ρ<sub>f</sub>·N·D² / μ &nbsp;(análogo al Re de agitación en tanques) · N en rev/s, D = 2·r<sub>tambor</sub>, ρ<sub>f</sub> ≈ 1000 kg/m³ (agua). Laminar: Re &lt; 10 · Transición: 10–10 000 · Turbulento: Re &gt; 10 000.</div>
+      </div>
+
       <div id="advToggle">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Parámetros avanzados (μ)
@@ -1166,6 +1217,9 @@
 
   // ---------------- Constante física fija ----------------
   var G_GRAV = 9.81;        // m/s2
+  var RHO_F_ASSUMED = 1000; // kg/m3 — fluido tipo agua, usado SOLO para el
+                             // gauge de Re del fluido (el simulador principal
+                             // trabaja con Δρ, no con ρf y ρp por separado)
 
   // ---------------- Escalas de visualización -----------------
   // La rotación visual del rotor y el desplazamiento radial de las
@@ -1223,6 +1277,8 @@
   var omegaVal = document.getElementById('omegaVal');
   var gVal     = document.getElementById('gVal');
   var vtVal    = document.getElementById('vtVal');
+  var reFluidoThumb = document.getElementById('reFluidoThumb');
+  var reFluidoBadge = document.getElementById('reFluidoBadge');
   var estadoTxt= document.getElementById('estadoTxt');
   var estadoBox= document.getElementById('estado');
 
@@ -1260,6 +1316,36 @@
     return (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas); // m/s, con signo
   }
 
+  // ---------------- Re del fluido dentro del tambor (régimen de flujo) ----------------
+  // Análogo al número de Reynolds de agitación en tanques (Re = ρND²/μ,
+  // Norwood-Metzner): aquí D = 2·r_tambor actúa como el "diámetro del
+  // impulsor" y N es la velocidad de giro en rev/s. Es el criterio correcto
+  // para justificar (o no) el flujo laminar que le pides a COMSOL: el agua
+  // dentro de una centrífuga real casi siempre cae en régimen turbulento.
+  function computeReFluid(rpm, r){
+    var mu_mpas = parseFloat(muSlider.value);
+    var mu_pas = mu_mpas * 1e-3;
+    var N_rps = rpm / 60;
+    var D = 2 * r;
+    return (RHO_F_ASSUMED * N_rps * D * D) / mu_pas;
+  }
+
+  function classifyReFluid(Re){
+    if (Re < 10)   return { label: 'Laminar',     color: '#3ad19a' };
+    if (Re <= 1e4) return { label: 'Transición',  color: '#f2c94c' };
+    return               { label: 'Turbulento',  color: '#ef5b5b' };
+  }
+
+  function updateReFluidoGauge(rpm, r){
+    var Re = computeReFluid(rpm, r);
+    var cls = classifyReFluid(Re);
+    var decades = Re > 1 ? Math.log10(Re) : 0;   // escala log, 0–8 décadas (Re: 1 a 1e8)
+    var pct = clamp((decades / 8) * 100, 0, 100);
+    reFluidoThumb.style.left = pct + '%';
+    reFluidoBadge.textContent = Re.toExponential(2) + ' · ' + cls.label;
+    reFluidoBadge.style.color = cls.color;
+  }
+
   function currentEquipmentInputs(){
     return {
       rpm: parseFloat(rpmSlider.value),
@@ -1274,6 +1360,8 @@
 
     omegaVal.textContent = og.omega.toFixed(3);
     gVal.textContent = og.G.toFixed(3);
+
+    updateReFluidoGauge(eq.rpm, eq.r);
 
     var sub = SIM.substance;
     if (sub){

@@ -551,6 +551,32 @@
   .eqCard .eqDesc{ font-size:10px; color: var(--text-faint); margin-top:6px; line-height:1.45; }
   .eqCard .eqRange{ font-size:9px; color: var(--text-faint); margin-top:2px; }
 
+  /* ---------- Tarjetas de gráficas (sección "Gráficas") ---------- */
+  .chartCard{
+    background: linear-gradient(160deg, #071528 0%, #040e1c 100%);
+    border:1px solid rgba(77,166,255,.22);
+    border-radius:9px;
+    padding:10px 12px 9px;
+    margin-bottom:9px;
+    box-shadow: 0 2px 12px rgba(0,10,30,.4);
+  }
+  .chartCard .chartTitle{
+    font-size:10.5px; color: var(--text-dim); letter-spacing:.2px;
+    margin-bottom:6px; line-height:1.35;
+  }
+  .chartCard svg{ width:100%; height:auto; display:block; overflow:visible; }
+  .chartAxisLabels{
+    display:flex; justify-content:space-between;
+    font-size:8.5px; color: var(--text-faint); margin-top:2px;
+  }
+  .chartCaption{
+    font-size:9.5px; color: var(--text-faint); margin-top:6px; line-height:1.4;
+  }
+  .chartEmpty{
+    font-size:10px; color: var(--text-faint); text-align:center;
+    padding:30px 4px; font-style:italic;
+  }
+
   /* --- notación matemática "de verdad": fracciones apiladas, superíndices,
      subíndices, en una tipografía serif de ecuación en vez de una sola
      línea monoespaciada --- */
@@ -717,6 +743,9 @@
   </button>
   <button type="button" data-target="secEcuaciones" title="Ecuaciones">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15l3-7 3 5 2-4 2 6" /></svg>
+  </button>
+  <button type="button" data-target="secGraficas" title="Gráficas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg>
   </button>
   <button type="button" data-target="secCalculadora" title="Calculadora">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
@@ -929,6 +958,16 @@
           <div class="val" id="vtVal">0.000</div>
           <div class="unit">mm/s</div>
         </div>
+        <div class="gauge">
+          <div class="lab">t sedimentación</div>
+          <div class="val" id="tsedVal">—</div>
+          <div class="unit" id="tsedUnit">s</div>
+        </div>
+        <div class="gauge">
+          <div class="lab">ΔP radial</div>
+          <div class="val" id="dpOutVal">0.0</div>
+          <div class="unit" id="dpOutUnit">Pa</div>
+        </div>
       </div>
       <div id="estado"><span class="dot"></span> Estado: <b id="estadoTxt">—</b></div>
       <button id="repeatBtn" type="button" hidden>
@@ -972,9 +1011,7 @@
            No es un control: es un "slider" de solo lectura cuyo indicador
            se mueve solo cada vez que cambias N, r o μ, mostrando en qué
            régimen (laminar/transición/turbulento) queda el líquido dentro
-           del tambor. Usa el mismo criterio del Re de agitación en tanques
-           (Norwood-Metzner) aplicado al giro del tambor como si fuera un
-           "impulsor" de diámetro D = 2r. -->
+           del tambor. Ver ecuación 7 en "Ecuaciones" para el detalle. -->
       <div class="ctrl readout" id="reFluidoCtrl">
         <div class="ctrl-head">
           <span class="name">Régimen del fluido (Re)</span>
@@ -988,7 +1025,7 @@
             <span>Laminar</span><span>Transición</span><span>Turbulento</span>
           </div>
         </div>
-        <div class="rangeNote">Re = ρ<sub>f</sub>·N·D² / μ &nbsp;(análogo al Re de agitación en tanques) · N en rev/s, D = 2·r<sub>tambor</sub>, ρ<sub>f</sub> ≈ 1000 kg/m³ (agua). Laminar: Re &lt; 10 · Transición: 10–10 000 · Turbulento: Re &gt; 10 000.</div>
+        <div class="rangeNote">Re = ρ<sub>f</sub>·N·D² / μ &nbsp;(análogo al Re de agitación en tanques, ec. 7) · N en rev/s, D = 2·r<sub>tambor</sub>, ρ<sub>f</sub> ≈ 1000 kg/m³ (agua). Laminar: Re &lt; 10 · Transición: 10–10 000 · Turbulento: Re &gt; 10 000.</div>
       </div>
 
       <div id="advToggle">
@@ -1100,7 +1137,7 @@
           <span>Re<sub>p</sub></span><span class="eqSign">=</span>
           <span class="eqFrac"><span class="num">ρ<sub>f</sub> · |v<sub>t</sub>| · d<sub>p</sub></span><span class="den">μ</span></span>
         </div>
-        <div class="eqDesc">Verifica si aplica la Ley de Stokes: se requiere Re<sub>p</sub> &lt; 0.5 (régimen laminar). Con Re<sub>p</sub> mayor, v<sub>t</sub> queda sobreestimada y haría falta un coeficiente de arrastre corregido.</div>
+        <div class="eqDesc">Verifica si aplica la Ley de Stokes: se requiere Re<sub>p</sub> &lt; 0.5 (régimen laminar <b>alrededor de la partícula</b>). Con Re<sub>p</sub> mayor, v<sub>t</sub> queda sobreestimada y haría falta un coeficiente de arrastre corregido. <b>No confundir con el Re del fluido del tambor (ecuación 7)</b>: éste es local a la partícula; aquél describe el flujo global del líquido.</div>
         <div class="eqRange">Calculado con los mismos μ, d<sub>p</sub> y ρ<sub>f</sub> del taller.</div>
       </div>
 
@@ -1112,12 +1149,82 @@
           <span class="eqSign">·</span>
           <span class="eqLn">ln<span class="arg">(r<sub>o</sub> / r<sub>i</sub>)</span></span>
         </div>
-        <div class="eqDesc">Integración exacta de la ecuación de Stokes-centrífuga entre el radio interior de la partícula r<sub>i</sub> y el radio de la pared r<sub>o</sub>. Es el tiempo mínimo teórico de residencia para lograr la separación completa de esa partícula.</div>
+        <div class="eqDesc">Integración exacta de la ecuación de Stokes-centrífuga entre el radio interior de la partícula r<sub>i</sub> y el radio de la pared r<sub>o</sub>. Es el tiempo mínimo teórico de residencia para lograr la separación completa de esa partícula. Su valor en vivo aparece en "Datos en tiempo real".</div>
         <div class="eqRange">En este simulador: r<sub>i</sub> = 0.10·r · r<sub>o</sub> = 0.93·r</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">7 · Número de Reynolds del fluido en el tambor (régimen de flujo)</div>
+        <div class="eqFormula">
+          <span>Re</span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">ρ<sub>f</sub> · N · D<sup>2</sup></span><span class="den">μ</span></span>
+        </div>
+        <div class="eqDesc">Análogo al Re de agitación en tanques (Norwood-Metzner): el tambor girando actúa como un "impulsor" de diámetro D = 2r. N en rev/s (no en rad/s). Describe si el <b>líquido en conjunto</b> dentro del tambor está en régimen laminar, transición o turbulento — la mayoría de centrífugas reales (N alto, D moderado, μ bajo) caen en turbulento. Se muestra en vivo como el indicador deslizante "Régimen del fluido" en la sección Equipo.</div>
+        <div class="eqRange">Umbrales: Re &lt; 10 laminar · 10–10 000 transición · Re &gt; 10 000 turbulento. ρ<sub>f</sub> asumida = 1000 kg/m³ (agua).</div>
       </div>
 
       <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); text-align:center; margin-top:2px;">
         Referencia: McCabe, Smith &amp; Harriott / Geankoplis — Operaciones Unitarias.
+      </div>
+    </section>
+
+    <!-- ============ SECCIÓN: GRÁFICAS DE OPERACIÓN ============ -->
+    <section class="panelSection" id="secGraficas">
+      <div class="sectionTitle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg>
+        Gráficas de operación
+      </div>
+      <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); margin:-2px 0 8px; line-height:1.4;">
+        Curvas típicas usadas en diseño/selección de centrífugas industriales, recalculadas en vivo con tus valores actuales de N, r, μ y Δρ. El punto blanco marca el ajuste actual de los sliders.
+      </div>
+
+      <div class="chartCard">
+        <div class="chartTitle">Velocidad terminal v<sub>t</sub> vs. diámetro de partícula d<sub>p</sub></div>
+        <svg viewBox="0 0 300 150" id="chartVt" preserveAspectRatio="none">
+          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
+          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
+          <path id="chartVtPath" d="" fill="none" stroke="#4da6ff" stroke-width="2"/>
+          <circle id="chartVtMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#4da6ff" stroke-width="2"/>
+          <text id="chartVtYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
+          <text id="chartVtYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
+          <text id="chartVtXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">1</text>
+          <text id="chartVtXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">200</text>
+        </svg>
+        <div class="chartAxisLabels"><span>d<sub>p</sub> (µm)</span><span>v<sub>t</sub> (mm/s)</span></div>
+        <div class="chartCaption">Estima el "corte" de la centrífuga: el tamaño mínimo de partícula que aún migra a velocidad apreciable con los ajustes actuales.</div>
+      </div>
+
+      <div class="chartCard">
+        <div class="chartTitle">Tiempo de sedimentación t vs. diámetro de partícula d<sub>p</sub> (escala log)</div>
+        <svg viewBox="0 0 300 150" id="chartTsed" preserveAspectRatio="none">
+          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
+          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
+          <path id="chartTsedPath" d="" fill="none" stroke="#b06aff" stroke-width="2"/>
+          <circle id="chartTsedMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#b06aff" stroke-width="2"/>
+          <text id="chartTsedYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">—</text>
+          <text id="chartTsedYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">—</text>
+          <text id="chartTsedXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">1</text>
+          <text id="chartTsedXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">200</text>
+          <text id="chartTsedEmptyMsg" x="164" y="70" font-size="9" fill="#4a6680" text-anchor="middle"></text>
+        </svg>
+        <div class="chartAxisLabels"><span>d<sub>p</sub> (µm)</span><span>t (s, log)</span></div>
+        <div class="chartCaption">Compárala contra el tiempo real de residencia del equipo: si t queda muy por encima, ese tamaño de partícula no llega a separarse.</div>
+      </div>
+
+      <div class="chartCard">
+        <div class="chartTitle">Factor de separación G vs. velocidad de rotación N</div>
+        <svg viewBox="0 0 300 150" id="chartG" preserveAspectRatio="none">
+          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
+          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
+          <path id="chartGPath" d="" fill="none" stroke="#ff9020" stroke-width="2"/>
+          <circle id="chartGMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#ff9020" stroke-width="2"/>
+          <text id="chartGYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
+          <text id="chartGYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
+          <text id="chartGXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">500</text>
+          <text id="chartGXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">12000</text>
+        </svg>
+        <div class="chartAxisLabels"><span>N (RPM)</span><span>G (adim.)</span></div>
+        <div class="chartCaption">Curva de selección: cuánta velocidad de giro necesitas, al radio actual, para alcanzar un factor G objetivo (crece con N²).</div>
       </div>
     </section>
 
@@ -1217,9 +1324,10 @@
 
   // ---------------- Constante física fija ----------------
   var G_GRAV = 9.81;        // m/s2
-  var RHO_F_ASSUMED = 1000; // kg/m3 — fluido tipo agua, usado SOLO para el
-                             // gauge de Re del fluido (el simulador principal
-                             // trabaja con Δρ, no con ρf y ρp por separado)
+  var RHO_F_ASSUMED = 1000; // kg/m3 — fluido tipo agua, usado para el gauge
+                             // de Re del fluido y para ΔP (el simulador
+                             // principal trabaja con Δρ, no con ρf y ρp
+                             // por separado)
 
   // ---------------- Escalas de visualización -----------------
   // La rotación visual del rotor y el desplazamiento radial de las
@@ -1277,6 +1385,10 @@
   var omegaVal = document.getElementById('omegaVal');
   var gVal     = document.getElementById('gVal');
   var vtVal    = document.getElementById('vtVal');
+  var tsedVal  = document.getElementById('tsedVal');
+  var tsedUnit = document.getElementById('tsedUnit');
+  var dpOutVal = document.getElementById('dpOutVal');
+  var dpOutUnit= document.getElementById('dpOutUnit');
   var reFluidoThumb = document.getElementById('reFluidoThumb');
   var reFluidoBadge = document.getElementById('reFluidoBadge');
   var estadoTxt= document.getElementById('estadoTxt');
@@ -1316,12 +1428,30 @@
     return (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas); // m/s, con signo
   }
 
-  // ---------------- Re del fluido dentro del tambor (régimen de flujo) ----------------
+  // Tiempo de sedimentación exacto (ecuación 6): integra Stokes-centrífuga
+  // entre r_i = 0.10·r (radio interior de la partícula) y r_o = 0.93·r
+  // (pared del tambor) — mismos límites usados en la calculadora general.
+  function computeTsed(omega, r, dRho, dp_m, mu_pas){
+    if (Math.abs(dRho) < 1) return null; // sin separación neta
+    var r_i = r * 0.10, r_o = r * 0.93;
+    var K = (18 * mu_pas) / (dp_m*dp_m * Math.abs(dRho) * omega*omega);
+    return K * Math.log(r_o / r_i); // s
+  }
+
+  // Caída de presión radial (ecuación 4) entre r_i y r_o de la columna de
+  // líquido, con ρf constante (agua) — ver nota de RHO_F_ASSUMED.
+  function computeDeltaP(omega, r){
+    var r_i = r * 0.10, r_o = r * 0.93;
+    return (RHO_F_ASSUMED * omega*omega * (r_o*r_o - r_i*r_i)) / 2; // Pa
+  }
+
+  // ---------------- Re del fluido dentro del tambor (ecuación 7) ----------------
   // Análogo al número de Reynolds de agitación en tanques (Re = ρND²/μ,
   // Norwood-Metzner): aquí D = 2·r_tambor actúa como el "diámetro del
-  // impulsor" y N es la velocidad de giro en rev/s. Es el criterio correcto
-  // para justificar (o no) el flujo laminar que le pides a COMSOL: el agua
-  // dentro de una centrífuga real casi siempre cae en régimen turbulento.
+  // impulsor" y N es la velocidad de giro en rev/s. Es un Re DISTINTO del
+  // Re_p de la ecuación 5 (que verifica la validez de Stokes para el
+  // arrastre de la partícula) — este otro verifica si el flujo GRANDE del
+  // líquido dentro del tambor es laminar o turbulento.
   function computeReFluid(rpm, r){
     var mu_mpas = parseFloat(muSlider.value);
     var mu_pas = mu_mpas * 1e-3;
@@ -1346,6 +1476,20 @@
     reFluidoBadge.style.color = cls.color;
   }
 
+  // Elige la unidad más legible para un tiempo en segundos
+  function formatTime(t_s){
+    if (t_s < 60)   return { v: t_s.toFixed(3),      u: 's' };
+    if (t_s < 3600) return { v: (t_s/60).toFixed(3), u: 'min' };
+    return                 { v: (t_s/3600).toFixed(3), u: 'h' };
+  }
+
+  // Elige la unidad más legible para una presión en Pa
+  function formatPressure(p_pa){
+    if (p_pa < 1000)    return { v: p_pa.toFixed(1),        u: 'Pa' };
+    if (p_pa < 1e6)     return { v: (p_pa/1000).toFixed(2), u: 'kPa' };
+    return                     { v: (p_pa/1e6).toFixed(3),  u: 'MPa' };
+  }
+
   function currentEquipmentInputs(){
     return {
       rpm: parseFloat(rpmSlider.value),
@@ -1363,14 +1507,32 @@
 
     updateReFluidoGauge(eq.rpm, eq.r);
 
+    // ΔP no depende de la sustancia (usa ρf, no Δρ) — siempre se puede mostrar
+    var dP = computeDeltaP(og.omega, eq.r);
+    var dPfmt = formatPressure(dP);
+    dpOutVal.textContent = dPfmt.v;
+    dpOutUnit.textContent = dPfmt.u;
+
     var sub = SIM.substance;
     if (sub){
       var dp_m = sub.dp_um * 1e-6;
       var mu_pas = eq.mu_mpas * 1e-3;
       var vt = computeVt(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
       vtVal.textContent = (vt*1000).toFixed(3); // mm/s
+
+      var tsed_s = computeTsed(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
+      if (tsed_s !== null){
+        var tfmt = formatTime(tsed_s);
+        tsedVal.textContent = tfmt.v;
+        tsedUnit.textContent = tfmt.u;
+      } else {
+        tsedVal.textContent = 'Δρ≈0';
+        tsedUnit.textContent = '';
+      }
     } else {
       vtVal.textContent = '0.000';
+      tsedVal.textContent = '—';
+      tsedUnit.textContent = 's';
     }
 
     rpmLive.textContent = eq.rpm.toFixed(0);
@@ -1404,7 +1566,133 @@
     estadoTxt.style.color = color;
     estadoBox.style.setProperty('--estado-color', color);
 
+    updateCharts(eq, og);
+
     return { eq: eq, og: og };
+  }
+
+  // ---------------- Gráficas de operación (SVG generado en vivo) ----------------
+  var CHART_VB = { w:300, h:150, padL:38, padR:10, padT:12, padB:24 };
+
+  function chartPoint(x, xMin, xMax, y, yMin, yMax){
+    var innerW = CHART_VB.w - CHART_VB.padL - CHART_VB.padR;
+    var innerH = CHART_VB.h - CHART_VB.padT - CHART_VB.padB;
+    var px = CHART_VB.padL + innerW * ((x - xMin) / (xMax - xMin));
+    var py = CHART_VB.padT + innerH * (1 - (y - yMin) / (yMax - yMin));
+    return [px, py];
+  }
+
+  function linspace(min, max, n){
+    var out = [];
+    for (var i = 0; i < n; i++){ out.push(min + (max-min) * i / (n-1)); }
+    return out;
+  }
+
+  function buildPathD(xs, ys, xMin, xMax, yMin, yMax){
+    var d = '';
+    for (var i = 0; i < xs.length; i++){
+      var p = chartPoint(xs[i], xMin, xMax, ys[i], yMin, yMax);
+      d += (i === 0 ? 'M' : 'L') + p[0].toFixed(2) + ',' + p[1].toFixed(2) + ' ';
+    }
+    return d.trim();
+  }
+
+  // ---- Chart 1: v_t vs d_p ----
+  var chartVtPath   = document.getElementById('chartVtPath');
+  var chartVtMarker = document.getElementById('chartVtMarker');
+  var chartVtYMax   = document.getElementById('chartVtYMax');
+  var chartVtYMin   = document.getElementById('chartVtYMin');
+
+  function renderChartVt(omega, r, dRho, mu_pas){
+    var xs = linspace(DP_MIN, DP_MAX, 40);
+    var ys = xs.map(function(dp_um){
+      return computeVt(omega, r, dRho, dp_um*1e-6, mu_pas) * 1000; // mm/s
+    });
+    var yMin = Math.min(0, Math.min.apply(null, ys));
+    var yMax = Math.max(0, Math.max.apply(null, ys));
+    if (yMin === yMax){ yMin -= 1; yMax += 1; }
+    chartVtPath.setAttribute('d', buildPathD(xs, ys, DP_MIN, DP_MAX, yMin, yMax));
+
+    var dpCur = parseFloat(dpSlider.value);
+    var yCur = computeVt(omega, r, dRho, dpCur*1e-6, mu_pas) * 1000;
+    var pt = chartPoint(dpCur, DP_MIN, DP_MAX, yCur, yMin, yMax);
+    chartVtMarker.setAttribute('cx', pt[0].toFixed(2));
+    chartVtMarker.setAttribute('cy', pt[1].toFixed(2));
+
+    chartVtYMax.textContent = yMax.toFixed(2);
+    chartVtYMin.textContent = yMin.toFixed(2);
+  }
+
+  // ---- Chart 2: t_sed vs d_p (escala log en Y) ----
+  var chartTsedPath     = document.getElementById('chartTsedPath');
+  var chartTsedMarker   = document.getElementById('chartTsedMarker');
+  var chartTsedYMax     = document.getElementById('chartTsedYMax');
+  var chartTsedYMin     = document.getElementById('chartTsedYMin');
+  var chartTsedEmptyMsg = document.getElementById('chartTsedEmptyMsg');
+
+  function renderChartTsed(omega, r, dRho, mu_pas){
+    if (Math.abs(dRho) < 1){
+      chartTsedPath.setAttribute('d', '');
+      chartTsedMarker.setAttribute('cy', '-100'); // fuera de vista
+      chartTsedYMax.textContent = '—';
+      chartTsedYMin.textContent = '—';
+      chartTsedEmptyMsg.textContent = 'Δρ ≈ 0 · sin separación neta que graficar';
+      return;
+    }
+    chartTsedEmptyMsg.textContent = '';
+
+    var xs = linspace(DP_MIN, DP_MAX, 40);
+    var ys = xs.map(function(dp_um){
+      return computeTsed(omega, r, dRho, dp_um*1e-6, mu_pas); // s (siempre positivo)
+    });
+    var logYs = ys.map(function(v){ return Math.log10(Math.max(v, 1e-9)); });
+    var yMin = Math.min.apply(null, logYs);
+    var yMax = Math.max.apply(null, logYs);
+    if (yMin === yMax){ yMin -= 1; yMax += 1; }
+    chartTsedPath.setAttribute('d', buildPathD(xs, logYs, DP_MIN, DP_MAX, yMin, yMax));
+
+    var dpCur = parseFloat(dpSlider.value);
+    var tCur = computeTsed(omega, r, dRho, dpCur*1e-6, mu_pas);
+    var pt = chartPoint(dpCur, DP_MIN, DP_MAX, Math.log10(Math.max(tCur,1e-9)), yMin, yMax);
+    chartTsedMarker.setAttribute('cx', pt[0].toFixed(2));
+    chartTsedMarker.setAttribute('cy', pt[1].toFixed(2));
+
+    // las etiquetas muestran el tiempo real (no el log) en la unidad más legible
+    var maxReal = Math.pow(10, yMax), minReal = Math.pow(10, yMin);
+    var fMax = formatTime(maxReal), fMin = formatTime(minReal);
+    chartTsedYMax.textContent = fMax.v + ' ' + fMax.u;
+    chartTsedYMin.textContent = fMin.v + ' ' + fMin.u;
+  }
+
+  // ---- Chart 3: G vs N ----
+  var chartGPath   = document.getElementById('chartGPath');
+  var chartGMarker = document.getElementById('chartGMarker');
+  var chartGYMax   = document.getElementById('chartGYMax');
+  var chartGYMin   = document.getElementById('chartGYMin');
+  var RPM_MIN = 500, RPM_MAX = 12000; // mismo rango del slider de N
+
+  function renderChartG(rpmCur, r, Gcur){
+    var xs = linspace(RPM_MIN, RPM_MAX, 40);
+    var ys = xs.map(function(rpm){ return computeOmegaG(rpm, r).G; });
+    var yMin = 0;
+    var yMax = Math.max.apply(null, ys);
+    if (yMax <= 0) yMax = 1;
+    chartGPath.setAttribute('d', buildPathD(xs, ys, RPM_MIN, RPM_MAX, yMin, yMax));
+
+    var pt = chartPoint(rpmCur, RPM_MIN, RPM_MAX, Gcur, yMin, yMax);
+    chartGMarker.setAttribute('cx', pt[0].toFixed(2));
+    chartGMarker.setAttribute('cy', pt[1].toFixed(2));
+
+    chartGYMax.textContent = yMax.toFixed(0);
+    chartGYMin.textContent = '0';
+  }
+
+  function updateCharts(eq, og){
+    var dRho = parseFloat(dRhoSlider.value);
+    var mu_pas = eq.mu_mpas * 1e-3;
+    renderChartVt(og.omega, eq.r, dRho, mu_pas);
+    renderChartTsed(og.omega, eq.r, dRho, mu_pas);
+    renderChartG(eq.rpm, eq.r, og.G);
   }
 
   // ---------------- Sincronización slider <-> input numérico ----------------
@@ -1836,27 +2124,29 @@
   // ---------------- Eventos de UI: partícula / sustancia ----------------
   bindSliderNumberPair(dRhoSlider, dRhoInput, function(){
     var sub = SIM.substance;
-    if (!sub) return;
     var v = parseFloat(dRhoSlider.value);
-    sub.dRho = v;
     dRhoLive.textContent = v.toFixed(0);
-    var sign = v >= 5 ? 1 : (v <= -5 ? -1 : 0);
-    if (sign !== sub.lastSign){
-      sub.lastSign = sign;
-      recolorSubstanceParticles(sub);
-      resetSubstanceParticles(sub);
+    if (sub){
+      sub.dRho = v;
+      var sign = v >= 5 ? 1 : (v <= -5 ? -1 : 0);
+      if (sign !== sub.lastSign){
+        sub.lastSign = sign;
+        recolorSubstanceParticles(sub);
+        resetSubstanceParticles(sub);
+      }
     }
-    updateReadouts();
+    updateReadouts(); // también refresca gauges/gráficas aunque no haya sustancia activa
   });
 
   bindSliderNumberPair(dpSlider, dpInput, function(){
     var sub = SIM.substance;
-    if (!sub) return;
     var v = parseFloat(dpSlider.value);
-    sub.dp_um = v;
     dpLive.textContent = v.toFixed(0);
-    applyParticleSize(sub);
-    updateReadouts();
+    if (sub){
+      sub.dp_um = v;
+      applyParticleSize(sub);
+    }
+    updateReadouts(); // también refresca gauges/gráficas aunque no haya sustancia activa
   });
 
   // ---------------- Controles de reproducción ----------------

@@ -46,11 +46,12 @@
    panel y modelo 3D del equipo). No se alteró ninguna fórmula ni
    constante física de las listadas arriba.
 
-   REVISIÓN v4 (panel por secciones + barra lateral + sustancia única + dinámica no cíclica):
-   - El panel se organizó en 4 secciones navegables con scroll vertical y
-     riel visible: Datos en tiempo real, Equipo/variables, Partícula/
-     sustancia y Ecuaciones. Una barra lateral fija (#sideNav) permite
-     saltar entre ellas.
+   REVISIÓN v4 (panel por secciones + sustancia única + dinámica no cíclica):
+   - El panel se organizó en secciones apiladas con scroll vertical: Datos
+     en tiempo real, Equipo/variables, Partícula/sustancia, Ecuaciones,
+     Gráficas y Calculadora. Se probó una barra lateral fija (#sideNav)
+     para saltar entre ellas, pero se quitó: tapaba la cámara/el modelo AR
+     detrás. Ahora se navega haciendo scroll dentro del panel.
    - Se removió la gestión multi-sustancia (agregar/quitar partículas).
      Ahora hay una sola sustancia activa (SIM.substance), con sus propios
      sliders de Δρ y d_p en la sección "Partícula".
@@ -486,34 +487,11 @@
   .ctrl.secondary .numBox:focus{ outline-color: var(--cyan); }
 
   /* =====================================================================
-     BARRA LATERAL DE NAVEGACIÓN (desplazamiento vertical entre secciones)
+     BARRA LATERAL DE NAVEGACIÓN: eliminada (tapaba la cámara/AR). Las
+     secciones del panel siguen ahí, una debajo de otra; se llega a ellas
+     haciendo scroll dentro del panel inferior.
      ===================================================================== */
-  #sideNav{
-    position:fixed; right:6px; top:50%; transform:translateY(-50%);
-    z-index:23;
-    display:flex; flex-direction:column; gap:8px;
-    background: linear-gradient(160deg, rgba(6,20,44,.88) 0%, rgba(4,12,28,.92) 100%);
-    border:1px solid rgba(77,166,255,.28);
-    border-radius:16px;
-    padding:8px 6px;
-    backdrop-filter: blur(8px);
-    box-shadow: 0 4px 20px rgba(0,10,40,.5), 0 0 0 1px rgba(77,166,255,.08);
-  }
-  #sideNav button{
-    width:34px; height:34px; border-radius:10px;
-    background: rgba(77,166,255,.06);
-    border:1px solid rgba(77,166,255,.18);
-    color: var(--text-dim);
-    display:flex; align-items:center; justify-content:center;
-    transition: background .15s ease, color .15s ease, border-color .15s ease;
-  }
-  #sideNav button svg{ width:16px; height:16px; }
-  #sideNav button.active{
-    background: linear-gradient(160deg, rgba(255,157,36,.22), rgba(255,138,0,.14));
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  #sideNav button:active{ background: rgba(255,255,255,.12); }
+
 
   /* secciones del panel + scroll vertical con riel visible */
   #panelScroll{
@@ -749,27 +727,6 @@
 <div id="lateralHint">Vista lateral libre — arrastra para rotar el equipo</div>
 
 <!-- ===================== BARRA LATERAL (navegación vertical del panel) ===================== -->
-<nav id="sideNav" aria-label="Navegación del panel">
-  <button type="button" data-target="secDatos" title="Datos en tiempo real">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg>
-  </button>
-  <button type="button" data-target="secEquipo" title="Equipo / variables">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-  </button>
-  <button type="button" data-target="secParticula" title="Partícula / sustancia">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
-  </button>
-  <button type="button" data-target="secEcuaciones" title="Ecuaciones">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 15l3-7 3 5 2-4 2 6" /></svg>
-  </button>
-  <button type="button" data-target="secGraficas" title="Gráficas">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><rect x="6" y="11" width="3" height="6"/><rect x="11" y="7" width="3" height="10"/><rect x="16" y="13" width="3" height="4"/></svg>
-  </button>
-  <button type="button" data-target="secCalculadora" title="Calculadora">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="10" y2="14"/><line x1="14" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
-  </button>
-</nav>
-
 <div id="whiteBgOverlay"></div>
 
 <a-scene
@@ -1500,7 +1457,6 @@
   var advToggle = document.getElementById('advToggle');
   var advPanel = document.getElementById('advPanel');
   var markerHint = document.getElementById('markerHint');
-  var sideNavBtns = document.querySelectorAll('#sideNav button');
 
   var sideViewBtn = document.getElementById('sideViewBtn');
   var sideViewLabel = document.getElementById('sideViewLabel');
@@ -2514,37 +2470,6 @@
     var open = advPanel.classList.toggle('open');
     advToggle.classList.toggle('open', open);
   });
-
-  // ---------------- Barra lateral: navegación vertical entre secciones ----------------
-  var sections = Array.prototype.map.call(sideNavBtns, function(btn){
-    return { btn: btn, el: document.getElementById(btn.getAttribute('data-target')) };
-  });
-
-  sideNavBtns.forEach(function(btn){
-    btn.addEventListener('click', function(){
-      var target = document.getElementById(btn.getAttribute('data-target'));
-      if (!target) return;
-      if (panelBody.classList.contains('collapsed')){
-        panelBody.classList.remove('collapsed');
-        panelToggle.classList.remove('is-collapsed');
-        panelToggleLabel.textContent = 'Ocultar';
-      }
-      panelScroll.scrollTo({ top: target.offsetTop - 2, behavior: 'smooth' });
-    });
-  });
-
-  function highlightActiveSection(){
-    var scrollPos = panelScroll.scrollTop + 12;
-    var activeEl = sections[0] && sections[0].el;
-    sections.forEach(function(s){
-      if (s.el && s.el.offsetTop <= scrollPos) activeEl = s.el;
-    });
-    sections.forEach(function(s){
-      s.btn.classList.toggle('active', s.el === activeEl);
-    });
-  }
-  panelScroll.addEventListener('scroll', highlightActiveSection);
-  highlightActiveSection();
 
   // ---------------- Calculadora de centrifugación ----------------
   var calcBtn = document.getElementById('calcBtn');

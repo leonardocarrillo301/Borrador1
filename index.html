@@ -535,8 +535,21 @@
   .sectionTitle{
     font-size:12.5px; font-weight:700; color: var(--text);
     display:flex; align-items:center; gap:7px; margin-bottom:8px;
+    cursor:pointer; user-select:none; -webkit-user-select:none;
   }
   .sectionTitle svg{ width:15px; height:15px; color: var(--accent); flex:none; }
+  .sectionTitle .sectionChevron{
+    margin-left:auto; width:13px; height:13px; color:var(--text-faint);
+    transition: transform .2s ease; flex:none;
+  }
+  .panelSection.collapsed .sectionChevron{ transform: rotate(-90deg); }
+  .sectionBody{
+    overflow:hidden;
+    transition: max-height .28s ease, opacity .2s ease;
+  }
+  .panelSection.collapsed .sectionBody{
+    max-height:0 !important; opacity:0; pointer-events:none;
+  }
 
   /* ---------- Sección Ecuaciones ---------- */
   .eqCard{
@@ -600,6 +613,11 @@
   .eqFrac .den{ padding-top:2px; }
   .eqLn{ font-style:italic; }
   .eqLn .arg{ font-style:italic; }
+  .eqSqrt{ font-style:normal; display:inline-flex; align-items:stretch; gap:1px; vertical-align:middle; }
+  .eqSqrt .radical{ display:flex; align-items:flex-end; padding-bottom:3px; font-size:1.25em; transform: scaleY(1.85); transform-origin:bottom; }
+  .eqSqrt .arg{ display:inline-block; border-top:1.4px solid var(--cyan); padding:3px 4px 0 3px; margin-left:0; align-self:flex-start; }
+  .eqInt{ font-style:normal; font-size:14px; }
+  .eqInt .arg{ font-style:italic; margin-left:2px; }
 
   /* ---------- Nota de rango bajo cada slider ---------- */
   .rangeNote{
@@ -812,6 +830,48 @@
       <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
       <a-entity class="vent" geometry="primitive: box" material="color:#0c0e10; shader:standard; metalness:0.2; roughness:0.7"></a-entity>
 
+      <!-- banda de seguridad amarilla/negra alrededor de la base (look industrial) -->
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#f2c230; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+      <a-entity class="hazardStripe" geometry="primitive: box" material="color:#16181a; shader:standard; metalness:0.1; roughness:0.6"></a-entity>
+
+      <!-- panel de control industrial: botones de arranque/paro -->
+      <a-entity id="controlPanel"
+        geometry="primitive: box"
+        material="color:#1a1d1f; shader:standard; metalness:0.35; roughness:0.55">
+      </a-entity>
+      <a-entity id="btnStart"
+        geometry="primitive: cylinder; segmentsRadial:14"
+        material="color:#2fbf6e; shader:standard; metalness:0.2; roughness:0.4; emissive:#2fbf6e; emissiveIntensity:0.15">
+      </a-entity>
+      <a-entity id="btnStop"
+        geometry="primitive: cylinder; segmentsRadial:14"
+        material="color:#e0473f; shader:standard; metalness:0.2; roughness:0.4; emissive:#e0473f; emissiveIntensity:0.15">
+      </a-entity>
+
+      <!-- pernos/tornillos visibles en la brida de la base (look industrial) -->
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+      <a-entity class="baseBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#7d858c; shader:standard; metalness:0.8; roughness:0.3"></a-entity>
+
       <!-- testigos / placa -->
       <a-entity id="brandPlate"
         text="value: UNIDAD III · CENTRIFUGACIÓN; color:#ff8a00; align:center; width:0.6; baseline:center; shader:msdf">
@@ -894,6 +954,16 @@
           geometry="primitive: cylinder; segmentsRadial:14"
           material="color:#ff8a00; shader:standard; metalness:0.4; roughness:0.4">
         </a-entity>
+
+        <!-- pernos de la tapa (look industrial, aporta detalle mecánico) -->
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
+        <a-entity class="lidBolt" geometry="primitive: cylinder; segmentsRadial:8" material="color:#8a929a; shader:standard; metalness:0.85; roughness:0.25"></a-entity>
       </a-entity>
 
       <!-- fases (geometría radialmente simétrica, no requiere rotar) -->
@@ -946,7 +1016,7 @@
         <div class="gauge">
           <div class="lab">ω angular</div>
           <div class="val" id="omegaVal">0.000</div>
-          <div class="unit">rad/s</div>
+          <div class="unit">rad/s <span id="omegaRpmVal" style="opacity:.75;">(4000 RPM)</span></div>
         </div>
         <div class="gauge">
           <div class="lab">Factor G</div>
@@ -967,6 +1037,11 @@
           <div class="lab">ΔP radial</div>
           <div class="val" id="dpOutVal">0.0</div>
           <div class="unit" id="dpOutUnit">Pa</div>
+        </div>
+        <div class="gauge">
+          <div class="lab">Re partícula (Ec. 5 / Ec. 6)</div>
+          <div class="val" id="reParticulaVal">—</div>
+          <div class="unit" id="reParticulaSub" style="font-size:8.5px; line-height:1.15;">—</div>
         </div>
       </div>
       <div id="estado"><span class="dot"></span> Estado: <b id="estadoTxt">—</b></div>
@@ -1025,7 +1100,7 @@
             <span>Laminar</span><span>Transición</span><span>Turbulento</span>
           </div>
         </div>
-        <div class="rangeNote">Re = ρ<sub>f</sub>·N·D² / μ &nbsp;(análogo al Re de agitación en tanques, ec. 7) · N en rev/s, D = 2·r<sub>tambor</sub>, ρ<sub>f</sub> ≈ 1000 kg/m³ (agua). Laminar: Re &lt; 10 · Transición: 10–10 000 · Turbulento: Re &gt; 10 000.</div>
+        <div class="rangeNote">Re = ρ<sub>f</sub>·N·D² / μ &nbsp;(análogo al Re de agitación en tanques, ec. 7) · N en rev/s, D = 2·r<sub>tambor</sub>, ρ<sub>f</sub> = valor actual del slider de la sección "Partícula" (ya no es fijo). Laminar: Re &lt; 10 · Transición: 10–10 000 · Turbulento: Re &gt; 10 000.</div>
       </div>
 
       <div id="advToggle">
@@ -1058,14 +1133,30 @@
 
       <div class="ctrl">
         <div class="ctrl-head">
-          <span class="name">Δρ = ρp − ρf</span>
-          <span class="live"><span id="dRhoLive">600</span> kg/m³</span>
+          <span class="name">ρ<sub>p</sub> — densidad de la partícula</span>
+          <span class="live"><span id="rhoPLive">1600</span> kg/m³</span>
         </div>
         <div class="ctrl-row">
-          <input type="range" id="dRhoSlider" min="-1000" max="2000" step="10" value="600">
-          <input type="number" id="dRhoInput" class="numBox" min="-1000" max="2000" step="10" value="600">
+          <input type="range" id="rhoPSlider" min="100" max="20000" step="10" value="1600">
+          <input type="number" id="rhoPInput" class="numBox" min="100" max="20000" step="10" value="1600">
         </div>
-        <div class="rangeNote">Rango admitido: <b>−1000 – 2000 kg/m³</b> (negativo = partícula flota hacia el eje)</div>
+        <div class="rangeNote">Rango admitido: <b>100 – 20 000 kg/m³</b></div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-head">
+          <span class="name">ρ<sub>f</sub> — densidad del fluido</span>
+          <span class="live"><span id="rhoFLive">1000</span> kg/m³</span>
+        </div>
+        <div class="ctrl-row">
+          <input type="range" id="rhoFSlider" min="500" max="2000" step="10" value="1000">
+          <input type="number" id="rhoFInput" class="numBox" min="500" max="2000" step="10" value="1000">
+        </div>
+        <div class="rangeNote">Rango admitido: <b>500 – 2000 kg/m³</b> (1000 ≈ agua, ya no es un valor fijo del simulador)</div>
+      </div>
+
+      <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); margin:-2px 0 4px;">
+        Δρ = ρ<sub>p</sub> − ρ<sub>f</sub> = <b><span id="dRhoLive">600</span> kg/m³</b> (calculado automáticamente, ya no es un slider independiente).
       </div>
 
       <div class="ctrl secondary">
@@ -1112,45 +1203,54 @@
       </div>
 
       <div class="eqCard">
-        <div class="eqName">3 · Velocidad terminal de migración (Stokes-centrífuga)</div>
+        <div class="eqName">3 · Velocidad terminal — régimen laminar (Ec. 5, Stokes)</div>
         <div class="eqFormula">
-          <span>v<sub>t</sub></span><span class="eqSign">=</span>
+          <span>v<sub>r</sub></span><span class="eqSign">=</span>
           <span class="eqFrac"><span class="num">d<sub>p</sub><sup>2</sup> · (ρ<sub>p</sub> − ρ<sub>f</sub>) · ω<sup>2</sup> · r</span><span class="den">18 · μ</span></span>
         </div>
-        <div class="eqDesc">v<sub>t</sub> &gt; 0: sedimentación hacia la pared del tambor · v<sub>t</sub> &lt; 0: flotación hacia el eje. Válida en régimen laminar (Re<sub>p</sub> &lt; 0.5, ver ecuación 5).</div>
-        <div class="eqRange">Δρ admitido: −1000 – 2000 kg/m³ · d<sub>p</sub> admitido: 1 – 200 µm</div>
+        <div class="eqDesc">v<sub>r</sub> &gt; 0: sedimentación hacia la pared del tambor · v<sub>r</sub> &lt; 0: flotación hacia el eje. Válida solo si Re<sub>p</sub> &lt; 1 (régimen laminar, ver ecuación 5). McCabe 29.76.</div>
+        <div class="eqRange">ρ<sub>p</sub>, ρ<sub>f</sub> admitidos: 100 – 20 000 y 500 – 2000 kg/m³ · d<sub>p</sub> admitido: 1 – 200 µm</div>
       </div>
 
       <div class="eqCard">
-        <div class="eqName">4 · Caída de presión radial en la fase líquida</div>
+        <div class="eqName">3b · Velocidad terminal — régimen turbulento (Ec. 6)</div>
+        <div class="eqFormula">
+          <span>u<sub>t</sub></span><span class="eqSign">=</span>
+          <span>1.75 ·</span>
+          <span class="eqSqrt"><span class="radical">√</span><span class="arg"><span class="eqFrac"><span class="num">(ω<sup>2</sup>·r) · d<sub>p</sub> · (ρ<sub>p</sub> − ρ<sub>f</sub>)</span><span class="den">ρ<sub>f</sub></span></span></span></span>
+        </div>
+        <div class="eqDesc">Se usa en vez de la Ec. 5 cuando el Re<sub>p</sub> calculado ya no es laminar (régimen turbulento, teóricamente 1000 &lt; Re<sub>p</sub> &lt; 200 000). McCabe 7.43. Son 2 ecuaciones para 2 casos distintos: el simulador calcula primero con la Ec. 5 y, si el Re<sub>p</sub> resultante no es laminar, recalcula con esta ecuación.</div>
+        <div class="eqRange">Rango de validez típico: 1000 &lt; Re<sub>p</sub> &lt; 200 000</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">4 · Número de Reynolds de partícula</div>
+        <div class="eqFormula">
+          <span>Re<sub>p</sub></span><span class="eqSign">=</span>
+          <span class="eqFrac"><span class="num">ρ<sub>f</sub> · |v| · d<sub>p</sub></span><span class="den">μ</span></span>
+        </div>
+        <div class="eqDesc">Decide qué ecuación aplica: Re<sub>p</sub> &lt; 1 → Ec. 5 (laminar/Stokes); en caso contrario → Ec. 6 (turbulento). <b>No confundir con el Re del fluido del tambor (ecuación 8)</b>: éste es local a la partícula; aquél describe el flujo global del líquido.</div>
+        <div class="eqRange">Calculado con los mismos μ, d<sub>p</sub>, ρ<sub>p</sub> y ρ<sub>f</sub> del taller.</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">5 · Tiempo de sedimentación</div>
+        <div class="eqFormula">
+          <span>t</span><span class="eqSign">=</span>
+          <span class="eqInt">∫<span class="arg"><span class="eqFrac"><span class="num">dr</span><span class="den">v(r)</span></span></span></span>
+        </div>
+        <div class="eqDesc">Integración numérica entre el radio interior de la partícula r<sub>i</sub> y el radio de la pared r<sub>o</sub>, evaluando en cada punto v(r) con la ecuación que corresponda (5 o 6) según el Re<sub>p</sub> local. Ya no es una fórmula cerrada única, porque v(r) puede cambiar de régimen a lo largo del radio. Su valor en vivo aparece en "Datos en tiempo real".</div>
+        <div class="eqRange">En este simulador: r<sub>i</sub> = 0.10·r · r<sub>o</sub> = 0.93·r</div>
+      </div>
+
+      <div class="eqCard">
+        <div class="eqName">6 · Caída de presión radial en la fase líquida</div>
         <div class="eqFormula">
           <span>ΔP</span><span class="eqSign">=</span>
           <span class="eqFrac"><span class="num">ρ<sub>f</sub> · ω<sup>2</sup> · (r<sub>2</sub><sup>2</sup> − r<sub>1</sub><sup>2</sup>)</span><span class="den">2</span></span>
         </div>
-        <div class="eqDesc">Presión hidrostática generada por el campo centrífugo entre dos radios r₁ (interior) y r₂ (exterior) de la columna de líquido — análogo centrífugo de ΔP = ρ·g·h.</div>
+        <div class="eqDesc">Presión hidrostática generada por el campo centrífugo entre dos radios r₁ (interior) y r₂ (exterior) de la columna de líquido — análogo centrífugo de ΔP = ρ·g·h. ρ<sub>f</sub> ya no es fija: usa el valor actual del slider de la sección Partícula.</div>
         <div class="eqRange">r₁, r₂ dentro del radio del tambor: 0.05 – 0.50 m</div>
-      </div>
-
-      <div class="eqCard">
-        <div class="eqName">5 · Número de Reynolds de partícula</div>
-        <div class="eqFormula">
-          <span>Re<sub>p</sub></span><span class="eqSign">=</span>
-          <span class="eqFrac"><span class="num">ρ<sub>f</sub> · |v<sub>t</sub>| · d<sub>p</sub></span><span class="den">μ</span></span>
-        </div>
-        <div class="eqDesc">Verifica si aplica la Ley de Stokes: se requiere Re<sub>p</sub> &lt; 0.5 (régimen laminar <b>alrededor de la partícula</b>). Con Re<sub>p</sub> mayor, v<sub>t</sub> queda sobreestimada y haría falta un coeficiente de arrastre corregido. <b>No confundir con el Re del fluido del tambor (ecuación 7)</b>: éste es local a la partícula; aquél describe el flujo global del líquido.</div>
-        <div class="eqRange">Calculado con los mismos μ, d<sub>p</sub> y ρ<sub>f</sub> del taller.</div>
-      </div>
-
-      <div class="eqCard">
-        <div class="eqName">6 · Tiempo de sedimentación</div>
-        <div class="eqFormula">
-          <span>t</span><span class="eqSign">=</span>
-          <span class="eqFrac"><span class="num">18 · μ</span><span class="den">d<sub>p</sub><sup>2</sup> · Δρ · ω<sup>2</sup></span></span>
-          <span class="eqSign">·</span>
-          <span class="eqLn">ln<span class="arg">(r<sub>o</sub> / r<sub>i</sub>)</span></span>
-        </div>
-        <div class="eqDesc">Integración exacta de la ecuación de Stokes-centrífuga entre el radio interior de la partícula r<sub>i</sub> y el radio de la pared r<sub>o</sub>. Es el tiempo mínimo teórico de residencia para lograr la separación completa de esa partícula. Su valor en vivo aparece en "Datos en tiempo real".</div>
-        <div class="eqRange">En este simulador: r<sub>i</sub> = 0.10·r · r<sub>o</sub> = 0.93·r</div>
       </div>
 
       <div class="eqCard">
@@ -1160,7 +1260,7 @@
           <span class="eqFrac"><span class="num">ρ<sub>f</sub> · N · D<sup>2</sup></span><span class="den">μ</span></span>
         </div>
         <div class="eqDesc">Análogo al Re de agitación en tanques (Norwood-Metzner): el tambor girando actúa como un "impulsor" de diámetro D = 2r. N en rev/s (no en rad/s). Describe si el <b>líquido en conjunto</b> dentro del tambor está en régimen laminar, transición o turbulento — la mayoría de centrífugas reales (N alto, D moderado, μ bajo) caen en turbulento. Se muestra en vivo como el indicador deslizante "Régimen del fluido" en la sección Equipo.</div>
-        <div class="eqRange">Umbrales: Re &lt; 10 laminar · 10–10 000 transición · Re &gt; 10 000 turbulento. ρ<sub>f</sub> asumida = 1000 kg/m³ (agua).</div>
+        <div class="eqRange">Umbrales: Re &lt; 10 laminar · 10–10 000 transición · Re &gt; 10 000 turbulento. ρ<sub>f</sub> = valor actual del slider (ya no fija).</div>
       </div>
 
       <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); text-align:center; margin-top:2px;">
@@ -1175,56 +1275,41 @@
         Gráficas de operación
       </div>
       <div class="ctrl-note" style="font-size:9.5px; color:var(--text-faint); margin:-2px 0 8px; line-height:1.4;">
-        Curvas típicas usadas en diseño/selección de centrífugas industriales, recalculadas en vivo con tus valores actuales de N, r, μ y Δρ. El punto blanco marca el ajuste actual de los sliders.
+        Perfiles a lo largo del radio del tambor (r<sub>i</sub> → r<sub>o</sub>), recalculados en vivo con tus valores actuales de N, r, μ, ρ<sub>p</sub> y ρ<sub>f</sub>. El punto marca la posición radial real de la partícula y se congela al pulsar <b>Pausa</b>.
       </div>
 
       <div class="chartCard">
-        <div class="chartTitle">Velocidad terminal v<sub>t</sub> vs. diámetro de partícula d<sub>p</sub></div>
-        <svg viewBox="0 0 300 150" id="chartVt" preserveAspectRatio="none">
-          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
-          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
-          <path id="chartVtPath" d="" fill="none" stroke="#4da6ff" stroke-width="2"/>
-          <circle id="chartVtMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#4da6ff" stroke-width="2"/>
-          <text id="chartVtYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
-          <text id="chartVtYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
-          <text id="chartVtXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">1</text>
-          <text id="chartVtXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">200</text>
+        <div class="chartTitle">Perfil de velocidad de migración v(r) dentro del tambor</div>
+        <svg viewBox="0 0 300 150" id="chartVprof" preserveAspectRatio="none">
+          <g id="chartVprofGrid"></g>
+          <line x1="38" y1="12" x2="38" y2="126" stroke="#3a4a5c" stroke-width="1.2"/>
+          <line x1="38" y1="126" x2="290" y2="126" stroke="#3a4a5c" stroke-width="1.2"/>
+          <path id="chartVprofPath" d="" fill="none" stroke="#3ad19a" stroke-width="2"/>
+          <circle id="chartVprofMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#3ad19a" stroke-width="2"/>
+          <g id="chartVprofXTicks"></g>
+          <g id="chartVprofYTicks"></g>
+          <text id="chartVprofCoord" x="286" y="22" font-size="8" fill="#3ad19a" text-anchor="end" font-family="monospace"></text>
+          <text id="chartVprofPauseTag" x="164" y="70" font-size="9" fill="#4a6680" text-anchor="middle"></text>
         </svg>
-        <div class="chartAxisLabels"><span>d<sub>p</sub> (µm)</span><span>v<sub>t</sub> (mm/s)</span></div>
-        <div class="chartCaption">Estima el "corte" de la centrífuga: el tamaño mínimo de partícula que aún migra a velocidad apreciable con los ajustes actuales.</div>
+        <div class="chartAxisLabels"><span>r (m), r<sub>i</sub>→r<sub>o</sub></span><span>v (mm/s)</span></div>
+        <div class="chartCaption">v(r) según la ecuación vigente en cada punto (Ec. 5 laminar / Ec. 6 turbulento, ver sección Ecuaciones). El punto sigue la posición radial real de la partícula en vivo.</div>
       </div>
 
       <div class="chartCard">
-        <div class="chartTitle">Tiempo de sedimentación t vs. diámetro de partícula d<sub>p</sub> (escala log)</div>
-        <svg viewBox="0 0 300 150" id="chartTsed" preserveAspectRatio="none">
-          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
-          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
-          <path id="chartTsedPath" d="" fill="none" stroke="#b06aff" stroke-width="2"/>
-          <circle id="chartTsedMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#b06aff" stroke-width="2"/>
-          <text id="chartTsedYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">—</text>
-          <text id="chartTsedYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">—</text>
-          <text id="chartTsedXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">1</text>
-          <text id="chartTsedXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">200</text>
-          <text id="chartTsedEmptyMsg" x="164" y="70" font-size="9" fill="#4a6680" text-anchor="middle"></text>
+        <div class="chartTitle">Perfil de caída de presión ΔP(r) dentro del tambor</div>
+        <svg viewBox="0 0 300 150" id="chartDPprof" preserveAspectRatio="none">
+          <g id="chartDPprofGrid"></g>
+          <line x1="38" y1="12" x2="38" y2="126" stroke="#3a4a5c" stroke-width="1.2"/>
+          <line x1="38" y1="126" x2="290" y2="126" stroke="#3a4a5c" stroke-width="1.2"/>
+          <path id="chartDPprofPath" d="" fill="none" stroke="#f2c94c" stroke-width="2"/>
+          <circle id="chartDPprofMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#f2c94c" stroke-width="2"/>
+          <g id="chartDPprofXTicks"></g>
+          <g id="chartDPprofYTicks"></g>
+          <text id="chartDPprofCoord" x="286" y="22" font-size="8" fill="#f2c94c" text-anchor="end" font-family="monospace"></text>
+          <text id="chartDPprofPauseTag" x="164" y="70" font-size="9" fill="#4a6680" text-anchor="middle"></text>
         </svg>
-        <div class="chartAxisLabels"><span>d<sub>p</sub> (µm)</span><span>t (s, log)</span></div>
-        <div class="chartCaption">Compárala contra el tiempo real de residencia del equipo: si t queda muy por encima, ese tamaño de partícula no llega a separarse.</div>
-      </div>
-
-      <div class="chartCard">
-        <div class="chartTitle">Factor de separación G vs. velocidad de rotación N</div>
-        <svg viewBox="0 0 300 150" id="chartG" preserveAspectRatio="none">
-          <line x1="38" y1="12" x2="38" y2="126" stroke="#233040" stroke-width="1"/>
-          <line x1="38" y1="126" x2="290" y2="126" stroke="#233040" stroke-width="1"/>
-          <path id="chartGPath" d="" fill="none" stroke="#ff9020" stroke-width="2"/>
-          <circle id="chartGMarker" cx="38" cy="126" r="3.6" fill="#0a1628" stroke="#ff9020" stroke-width="2"/>
-          <text id="chartGYMax" x="34" y="15" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
-          <text id="chartGYMin" x="34" y="126" font-size="7.5" fill="#4a6680" text-anchor="end">0</text>
-          <text id="chartGXMin" x="38" y="138" font-size="7.5" fill="#4a6680" text-anchor="start">500</text>
-          <text id="chartGXMax" x="290" y="138" font-size="7.5" fill="#4a6680" text-anchor="end">12000</text>
-        </svg>
-        <div class="chartAxisLabels"><span>N (RPM)</span><span>G (adim.)</span></div>
-        <div class="chartCaption">Curva de selección: cuánta velocidad de giro necesitas, al radio actual, para alcanzar un factor G objetivo (crece con N²).</div>
+        <div class="chartAxisLabels"><span>r (m), r<sub>i</sub>→r<sub>o</sub></span><span>ΔP (Pa)</span></div>
+        <div class="chartCaption">Presión hidrostática acumulada desde r<sub>i</sub> hasta r. El punto marca el radio actual; se congela al pulsar <b>Pausa</b>, igual que el resto de lecturas.</div>
       </div>
     </section>
 
@@ -1280,7 +1365,7 @@
         <div class="calcOut">
           <div class="co-lab">ω angular</div>
           <div class="co-val" id="co_omega">—</div>
-          <div class="co-unit">rad/s</div>
+          <div class="co-unit">rad/s · <span id="co_omega_rpm">—</span> RPM</div>
         </div>
         <div class="calcOut">
           <div class="co-lab">Factor G</div>
@@ -1288,7 +1373,7 @@
           <div class="co-unit">adimensional</div>
         </div>
         <div class="calcOut">
-          <div class="co-lab">Δρ</div>
+          <div class="co-lab">Δρ — DIFERENCIA DE DENSIDADES</div>
           <div class="co-val" id="co_dRho">—</div>
           <div class="co-unit">kg/m³</div>
         </div>
@@ -1298,9 +1383,9 @@
           <div class="co-unit">mm/s</div>
         </div>
         <div class="calcOut" style="grid-column:1/-1">
-          <div class="co-lab">Re partícula (verificación Stokes)</div>
+          <div class="co-lab">Re partícula (Ec. 5 / Ec. 6)</div>
           <div class="co-val" id="co_Re">—</div>
-          <div class="co-unit">adim · Stokes válido si Re &lt; 0.5</div>
+          <div class="co-unit">adim, entero · <span id="co_Re_regime">—</span></div>
         </div>
         <div class="calcOut highlight" style="grid-column:1/-1">
           <div class="co-lab">⏱ Tiempo de sedimentación estimado</div>
@@ -1324,10 +1409,9 @@
 
   // ---------------- Constante física fija ----------------
   var G_GRAV = 9.81;        // m/s2
-  var RHO_F_ASSUMED = 1000; // kg/m3 — fluido tipo agua, usado para el gauge
-                             // de Re del fluido y para ΔP (el simulador
-                             // principal trabaja con Δρ, no con ρf y ρp
-                             // por separado)
+  // Nota: ya no existe una densidad de fluido fija (RHO_F_ASSUMED). ρp y ρf
+  // ahora son sliders independientes (sección "Partícula") y su valor se lee
+  // en vivo con rhoPSlider.value / rhoFSlider.value en cada cálculo.
 
   // ---------------- Escalas de visualización -----------------
   // La rotación visual del rotor y el desplazamiento radial de las
@@ -1343,8 +1427,12 @@
   var RADIAL_VIS_MIN    = 0.005;  // velocidad visual mínima (m/s) cuando hay separación,
                                   // para que siempre se note movimiento (≈ 25 s a r=0.15)
   var RADIAL_VIS_MAX    = 0.022;  // velocidad visual máxima (m/s), evita que sea instantáneo
-  var N_PARTICLES = 18;           // partículas visuales de la sustancia activa
+  var N_PARTICLES = 90;           // partículas visuales de la sustancia activa
+                                   // (subido de 18 a 90 para que la transición
+                                   // de fases -sedimentación/flotación- sea
+                                   // claramente visible en la simulación)
   var N_STRUTS = 6, N_FEET = 4, N_VENTS = 10;
+  var N_HAZARD = 16, N_BASE_BOLTS = 8, N_LID_BOLTS = 8;
 
   // tamaño visual de partícula: escala real con d_p (µm), acotado a un
   // rango perceptible en AR (1 µm -> esfera mínima, 200 µm -> máxima)
@@ -1366,18 +1454,22 @@
   var rpmSlider  = document.getElementById('rpmSlider');
   var rSlider    = document.getElementById('rSlider');
   var muSlider   = document.getElementById('muSlider');
-  var dRhoSlider = document.getElementById('dRhoSlider');
+  var rhoPSlider = document.getElementById('rhoPSlider');
+  var rhoFSlider = document.getElementById('rhoFSlider');
   var dpSlider   = document.getElementById('dpSlider');
 
   var rpmInput   = document.getElementById('rpmInput');
   var rInput     = document.getElementById('rInput');
   var muInput    = document.getElementById('muInput');
-  var dRhoInput  = document.getElementById('dRhoInput');
+  var rhoPInput  = document.getElementById('rhoPInput');
+  var rhoFInput  = document.getElementById('rhoFInput');
   var dpInput    = document.getElementById('dpInput');
 
   var rpmLive  = document.getElementById('rpmLive');
   var rLive    = document.getElementById('rLive');
   var muLive   = document.getElementById('muLive');
+  var rhoPLive = document.getElementById('rhoPLive');
+  var rhoFLive = document.getElementById('rhoFLive');
   var dRhoLive = document.getElementById('dRhoLive');
   var dpLive   = document.getElementById('dpLive');
   var rpmChipVal = document.getElementById('rpmChipVal');
@@ -1389,6 +1481,9 @@
   var tsedUnit = document.getElementById('tsedUnit');
   var dpOutVal = document.getElementById('dpOutVal');
   var dpOutUnit= document.getElementById('dpOutUnit');
+  var reParticulaVal = document.getElementById('reParticulaVal');
+  var reParticulaSub = document.getElementById('reParticulaSub');
+  var omegaRpmVal = document.getElementById('omegaRpmVal');
   var reFluidoThumb = document.getElementById('reFluidoThumb');
   var reFluidoBadge = document.getElementById('reFluidoBadge');
   var estadoTxt= document.getElementById('estadoTxt');
@@ -1425,39 +1520,82 @@
   }
 
   function computeVt(omega, r, dRho, dp_m, mu_pas){
-    return (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas); // m/s, con signo
+    return (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas); // m/s, con signo (Stokes puro)
   }
 
-  // Tiempo de sedimentación exacto (ecuación 6): integra Stokes-centrífuga
-  // entre r_i = 0.10·r (radio interior de la partícula) y r_o = 0.93·r
-  // (pared del tambor) — mismos límites usados en la calculadora general.
-  function computeTsed(omega, r, dRho, dp_m, mu_pas){
-    if (Math.abs(dRho) < 1) return null; // sin separación neta
+  // ---------------- Velocidad terminal de migración: 2 ecuaciones, 2 regímenes ----------------
+  // Ec. 5 (McCabe 29.76) — Ley de Stokes, válida en régimen LAMINAR (Re_p < 1):
+  //   v_r = dp²·(ρp−ρf)·ω²·r / (18μ)
+  // Ec. 6 (McCabe 7.43) — válida en régimen TURBULENTO (1000 < Re_p < 200 000):
+  //   u_t = 1.75 · sqrt( ω²·r·dp·(ρp−ρf) / ρf )
+  // Estrategia: se calcula primero Re_p con la Ec. 5 (semilla). Si ese Re_p
+  // ya es laminar (< 1), la Ec. 5 es la respuesta final. Si no, se recalcula
+  // v_t con la Ec. 6 (turbulento) y se reporta el Re_p resultante con esa
+  // velocidad. Son 2 ecuaciones para 2 casos distintos, no una interpolación.
+  function computeVtCD(omega, r, dRho, dp_m, mu_pas, rhoF){
+    rhoF = (typeof rhoF === 'number' && rhoF > 0) ? rhoF : 1000;
+    var absDRho = Math.abs(dRho);
+    if (absDRho < 1e-9 || r <= 0 || omega === 0){
+      return { vt: 0, Re: 0, regime: 'N/A', formula: '—' };
+    }
+    var sign = dRho >= 0 ? 1 : -1;
+
+    // Ec. 5: Stokes (laminar)
+    var vtStokes = (dp_m*dp_m * absDRho * omega*omega * r) / (18 * mu_pas);
+    var ReStokes = (rhoF * vtStokes * dp_m) / mu_pas;
+
+    if (ReStokes < 1){
+      return { vt: sign*vtStokes, Re: ReStokes, regime: 'Laminar (Ec. 5, Stokes)', formula: 'Ec. 5' };
+    }
+
+    // Ec. 6: régimen turbulento (coeficiente de arrastre ≈ constante)
+    var vtTurb = 1.75 * Math.sqrt( (omega*omega * r) * dp_m * absDRho / rhoF );
+    var ReTurb = (rhoF * vtTurb * dp_m) / mu_pas;
+    var regimeLabel = (ReTurb >= 1000 && ReTurb <= 200000)
+      ? 'Turbulento (Ec. 6)'
+      : 'Transición · fuera de 1000<Re_p<200000, se usa Ec. 6 como aproximación';
+    return { vt: sign*vtTurb, Re: ReTurb, regime: regimeLabel, formula: 'Ec. 6' };
+  }
+
+  // Tiempo de sedimentación integrando numéricamente dr/dt = vt_CD(r) entre
+  // r_i y r_o (en vez de la fórmula cerrada de Stokes, ya no válida cuando
+  // Re_p >= 0.5). Integración por punto medio con STEPS_TSED tramos.
+  var STEPS_TSED = 40;
+  function computeTsedCD(omega, r, dRho, dp_m, mu_pas, rhoF){
+    if (Math.abs(dRho) < 1) return null;
     var r_i = r * 0.10, r_o = r * 0.93;
-    var K = (18 * mu_pas) / (dp_m*dp_m * Math.abs(dRho) * omega*omega);
-    return K * Math.log(r_o / r_i); // s
+    var dr = (r_o - r_i) / STEPS_TSED;
+    var t = 0;
+    for (var i = 0; i < STEPS_TSED; i++){
+      var rm = r_i + (i + 0.5) * dr;
+      var speed = Math.abs(computeVtCD(omega, rm, dRho, dp_m, mu_pas, rhoF).vt);
+      if (speed < 1e-12) speed = 1e-12;
+      t += dr / speed;
+    }
+    return t;
   }
 
   // Caída de presión radial (ecuación 4) entre r_i y r_o de la columna de
-  // líquido, con ρf constante (agua) — ver nota de RHO_F_ASSUMED.
-  function computeDeltaP(omega, r){
+  // líquido. ρf ya no es fija: se toma del slider de la sección Partícula.
+  function computeDeltaP(omega, r, rhoF){
     var r_i = r * 0.10, r_o = r * 0.93;
-    return (RHO_F_ASSUMED * omega*omega * (r_o*r_o - r_i*r_i)) / 2; // Pa
+    return (rhoF * omega*omega * (r_o*r_o - r_i*r_i)) / 2; // Pa
   }
 
   // ---------------- Re del fluido dentro del tambor (ecuación 7) ----------------
   // Análogo al número de Reynolds de agitación en tanques (Re = ρND²/μ,
   // Norwood-Metzner): aquí D = 2·r_tambor actúa como el "diámetro del
   // impulsor" y N es la velocidad de giro en rev/s. Es un Re DISTINTO del
-  // Re_p de la ecuación 5 (que verifica la validez de Stokes para el
-  // arrastre de la partícula) — este otro verifica si el flujo GRANDE del
-  // líquido dentro del tambor es laminar o turbulento.
+  // Re_p de la ecuación 5/6 (que verifica el régimen de arrastre alrededor
+  // de la partícula) — este otro verifica si el flujo GRANDE del líquido
+  // dentro del tambor es laminar o turbulento.
   function computeReFluid(rpm, r){
     var mu_mpas = parseFloat(muSlider.value);
     var mu_pas = mu_mpas * 1e-3;
+    var rhoF = parseFloat(rhoFSlider.value);
     var N_rps = rpm / 60;
     var D = 2 * r;
-    return (RHO_F_ASSUMED * N_rps * D * D) / mu_pas;
+    return (rhoF * N_rps * D * D) / mu_pas;
   }
 
   function classifyReFluid(Re){
@@ -1472,7 +1610,7 @@
     var decades = Re > 1 ? Math.log10(Re) : 0;   // escala log, 0–8 décadas (Re: 1 a 1e8)
     var pct = clamp((decades / 8) * 100, 0, 100);
     reFluidoThumb.style.left = pct + '%';
-    reFluidoBadge.textContent = Re.toExponential(2) + ' · ' + cls.label;
+    reFluidoBadge.textContent = formatReInt(Re) + ' · ' + cls.label;
     reFluidoBadge.style.color = cls.color;
   }
 
@@ -1481,6 +1619,13 @@
     if (t_s < 60)   return { v: t_s.toFixed(3),      u: 's' };
     if (t_s < 3600) return { v: (t_s/60).toFixed(3), u: 'min' };
     return                 { v: (t_s/3600).toFixed(3), u: 'h' };
+  }
+
+  // Formatea un número de Reynolds como entero, con todas sus cifras
+  // (sin notación científica) y separador de miles para legibilidad.
+  function formatReInt(re){
+    if (re === null || re === undefined || isNaN(re)) return '—';
+    return Math.round(re).toLocaleString('es-CO');
   }
 
   // Elige la unidad más legible para una presión en Pa
@@ -1494,7 +1639,9 @@
     return {
       rpm: parseFloat(rpmSlider.value),
       r:   parseFloat(rSlider.value),
-      mu_mpas: parseFloat(muSlider.value)
+      mu_mpas: parseFloat(muSlider.value),
+      rhoF: parseFloat(rhoFSlider.value),
+      rhoP: parseFloat(rhoPSlider.value)
     };
   }
 
@@ -1503,12 +1650,13 @@
     var og = computeOmegaG(eq.rpm, eq.r);
 
     omegaVal.textContent = og.omega.toFixed(3);
+    omegaRpmVal.textContent = '(' + eq.rpm.toFixed(0) + ' RPM)';
     gVal.textContent = og.G.toFixed(3);
 
     updateReFluidoGauge(eq.rpm, eq.r);
 
     // ΔP no depende de la sustancia (usa ρf, no Δρ) — siempre se puede mostrar
-    var dP = computeDeltaP(og.omega, eq.r);
+    var dP = computeDeltaP(og.omega, eq.r, eq.rhoF);
     var dPfmt = formatPressure(dP);
     dpOutVal.textContent = dPfmt.v;
     dpOutUnit.textContent = dPfmt.u;
@@ -1517,10 +1665,12 @@
     if (sub){
       var dp_m = sub.dp_um * 1e-6;
       var mu_pas = eq.mu_mpas * 1e-3;
-      var vt = computeVt(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
-      vtVal.textContent = (vt*1000).toFixed(3); // mm/s
+      var res = computeVtCD(og.omega, eq.r, sub.dRho, dp_m, mu_pas, eq.rhoF);
+      vtVal.textContent = (res.vt*1000).toFixed(3); // mm/s, según Ec.5/Ec.6 según régimen
+      reParticulaVal.textContent = formatReInt(res.Re);
+      reParticulaSub.textContent = res.regime;
 
-      var tsed_s = computeTsed(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
+      var tsed_s = computeTsedCD(og.omega, eq.r, sub.dRho, dp_m, mu_pas, eq.rhoF);
       if (tsed_s !== null){
         var tfmt = formatTime(tsed_s);
         tsedVal.textContent = tfmt.v;
@@ -1533,6 +1683,8 @@
       vtVal.textContent = '0.000';
       tsedVal.textContent = '—';
       tsedUnit.textContent = 's';
+      reParticulaVal.textContent = '—';
+      reParticulaSub.textContent = '';
     }
 
     rpmLive.textContent = eq.rpm.toFixed(0);
@@ -1543,8 +1695,9 @@
     syncNumberFromSlider(rpmSlider, rpmInput);
     syncNumberFromSlider(rSlider, rInput);
     syncNumberFromSlider(muSlider, muInput);
+    syncNumberFromSlider(rhoPSlider, rhoPInput);
+    syncNumberFromSlider(rhoFSlider, rhoFInput);
     if (sub){
-      syncNumberFromSlider(dRhoSlider, dRhoInput);
       syncNumberFromSlider(dpSlider, dpInput);
     }
 
@@ -1572,6 +1725,9 @@
   }
 
   // ---------------- Gráficas de operación (SVG generado en vivo) ----------------
+  // Se dejan únicamente 2 gráficas (velocidad de migración y caída de presión,
+  // ambas en función del radio r), con escala graduada en varios puntos de
+  // cada eje (no solo el mínimo y el máximo).
   var CHART_VB = { w:300, h:150, padL:38, padR:10, padT:12, padB:24 };
 
   function chartPoint(x, xMin, xMax, y, yMin, yMax){
@@ -1597,102 +1753,112 @@
     return d.trim();
   }
 
-  // ---- Chart 1: v_t vs d_p ----
-  var chartVtPath   = document.getElementById('chartVtPath');
-  var chartVtMarker = document.getElementById('chartVtMarker');
-  var chartVtYMax   = document.getElementById('chartVtYMax');
-  var chartVtYMin   = document.getElementById('chartVtYMin');
-
-  function renderChartVt(omega, r, dRho, mu_pas){
-    var xs = linspace(DP_MIN, DP_MAX, 40);
-    var ys = xs.map(function(dp_um){
-      return computeVt(omega, r, dRho, dp_um*1e-6, mu_pas) * 1000; // mm/s
-    });
-    var yMin = Math.min(0, Math.min.apply(null, ys));
-    var yMax = Math.max(0, Math.max.apply(null, ys));
-    if (yMin === yMax){ yMin -= 1; yMax += 1; }
-    chartVtPath.setAttribute('d', buildPathD(xs, ys, DP_MIN, DP_MAX, yMin, yMax));
-
-    var dpCur = parseFloat(dpSlider.value);
-    var yCur = computeVt(omega, r, dRho, dpCur*1e-6, mu_pas) * 1000;
-    var pt = chartPoint(dpCur, DP_MIN, DP_MAX, yCur, yMin, yMax);
-    chartVtMarker.setAttribute('cx', pt[0].toFixed(2));
-    chartVtMarker.setAttribute('cy', pt[1].toFixed(2));
-
-    chartVtYMax.textContent = yMax.toFixed(2);
-    chartVtYMin.textContent = yMin.toFixed(2);
-  }
-
-  // ---- Chart 2: t_sed vs d_p (escala log en Y) ----
-  var chartTsedPath     = document.getElementById('chartTsedPath');
-  var chartTsedMarker   = document.getElementById('chartTsedMarker');
-  var chartTsedYMax     = document.getElementById('chartTsedYMax');
-  var chartTsedYMin     = document.getElementById('chartTsedYMin');
-  var chartTsedEmptyMsg = document.getElementById('chartTsedEmptyMsg');
-
-  function renderChartTsed(omega, r, dRho, mu_pas){
-    if (Math.abs(dRho) < 1){
-      chartTsedPath.setAttribute('d', '');
-      chartTsedMarker.setAttribute('cy', '-100'); // fuera de vista
-      chartTsedYMax.textContent = '—';
-      chartTsedYMin.textContent = '—';
-      chartTsedEmptyMsg.textContent = 'Δρ ≈ 0 · sin separación neta que graficar';
-      return;
+  // Genera graduaciones (ticks) intermedias en ambos ejes, no solo el
+  // extremo mínimo y el máximo, para poder leer el valor en varios puntos.
+  function renderAxisTicks(xTicksEl, yTicksEl, gridEl, xMin, xMax, yMin, yMax, xFmt, yFmt, nX, nY){
+    nX = nX || 4; nY = nY || 4;
+    var xHtml = '', yHtml = '', gridHtml = '';
+    for (var i = 0; i <= nX; i++){
+      var xv = xMin + (xMax - xMin) * i / nX;
+      var px = chartPoint(xv, xMin, xMax, yMin, yMin, yMax)[0];
+      xHtml += '<line x1="'+px.toFixed(2)+'" y1="126" x2="'+px.toFixed(2)+'" y2="130" stroke="#4a6680" stroke-width="1"/>';
+      xHtml += '<text x="'+px.toFixed(2)+'" y="140" font-size="6.3" fill="#6a8299" text-anchor="middle">'+xFmt(xv)+'</text>';
     }
-    chartTsedEmptyMsg.textContent = '';
-
-    var xs = linspace(DP_MIN, DP_MAX, 40);
-    var ys = xs.map(function(dp_um){
-      return computeTsed(omega, r, dRho, dp_um*1e-6, mu_pas); // s (siempre positivo)
-    });
-    var logYs = ys.map(function(v){ return Math.log10(Math.max(v, 1e-9)); });
-    var yMin = Math.min.apply(null, logYs);
-    var yMax = Math.max.apply(null, logYs);
-    if (yMin === yMax){ yMin -= 1; yMax += 1; }
-    chartTsedPath.setAttribute('d', buildPathD(xs, logYs, DP_MIN, DP_MAX, yMin, yMax));
-
-    var dpCur = parseFloat(dpSlider.value);
-    var tCur = computeTsed(omega, r, dRho, dpCur*1e-6, mu_pas);
-    var pt = chartPoint(dpCur, DP_MIN, DP_MAX, Math.log10(Math.max(tCur,1e-9)), yMin, yMax);
-    chartTsedMarker.setAttribute('cx', pt[0].toFixed(2));
-    chartTsedMarker.setAttribute('cy', pt[1].toFixed(2));
-
-    // las etiquetas muestran el tiempo real (no el log) en la unidad más legible
-    var maxReal = Math.pow(10, yMax), minReal = Math.pow(10, yMin);
-    var fMax = formatTime(maxReal), fMin = formatTime(minReal);
-    chartTsedYMax.textContent = fMax.v + ' ' + fMax.u;
-    chartTsedYMin.textContent = fMin.v + ' ' + fMin.u;
+    for (var j = 0; j <= nY; j++){
+      var yv = yMin + (yMax - yMin) * j / nY;
+      var py = chartPoint(xMin, xMin, xMax, yv, yMin, yMax)[1];
+      gridHtml += '<line x1="38" y1="'+py.toFixed(2)+'" x2="290" y2="'+py.toFixed(2)+'" stroke="#1c2733" stroke-width="0.6"/>';
+      yHtml += '<text x="34" y="'+(py+2.4).toFixed(2)+'" font-size="6.3" fill="#6a8299" text-anchor="end">'+yFmt(yv)+'</text>';
+    }
+    xTicksEl.innerHTML = xHtml;
+    yTicksEl.innerHTML = yHtml;
+    gridEl.innerHTML = gridHtml;
   }
 
-  // ---- Chart 3: G vs N ----
-  var chartGPath   = document.getElementById('chartGPath');
-  var chartGMarker = document.getElementById('chartGMarker');
-  var chartGYMax   = document.getElementById('chartGYMax');
-  var chartGYMin   = document.getElementById('chartGYMin');
-  var RPM_MIN = 500, RPM_MAX = 12000; // mismo rango del slider de N
+  // ---- Chart 1: perfil de velocidad de migración v(r) ----
+  var chartVprofPath     = document.getElementById('chartVprofPath');
+  var chartVprofMarker   = document.getElementById('chartVprofMarker');
+  var chartVprofXTicks   = document.getElementById('chartVprofXTicks');
+  var chartVprofYTicks   = document.getElementById('chartVprofYTicks');
+  var chartVprofGrid     = document.getElementById('chartVprofGrid');
+  var chartVprofCoord    = document.getElementById('chartVprofCoord');
+  var chartVprofPauseTag = document.getElementById('chartVprofPauseTag');
 
-  function renderChartG(rpmCur, r, Gcur){
-    var xs = linspace(RPM_MIN, RPM_MAX, 40);
-    var ys = xs.map(function(rpm){ return computeOmegaG(rpm, r).G; });
+  // ---- Chart 2: perfil de caída de presión ΔP(r) ----
+  var chartDPprofPath     = document.getElementById('chartDPprofPath');
+  var chartDPprofMarker   = document.getElementById('chartDPprofMarker');
+  var chartDPprofXTicks   = document.getElementById('chartDPprofXTicks');
+  var chartDPprofYTicks   = document.getElementById('chartDPprofYTicks');
+  var chartDPprofGrid     = document.getElementById('chartDPprofGrid');
+  var chartDPprofCoord    = document.getElementById('chartDPprofCoord');
+  var chartDPprofPauseTag = document.getElementById('chartDPprofPauseTag');
+
+  // radio "actual" representativo: promedio de las partículas activas de la
+  // sustancia (o r_i si aún no hay sustancia creada)
+  function currentSubstanceRadius(r_i){
+    var sub = SIM.substance;
+    if (!sub || !sub.particles.length) return r_i;
+    var sum = 0;
+    for (var i=0;i<sub.particles.length;i++) sum += sub.particles[i].radius;
+    return sum / sub.particles.length;
+  }
+
+  function renderChartVprof(omega, r, dRho, dp_m, mu_pas, rhoF){
+    var lim = limits(r); // mismos límites r_i/r_o que usa el modelo 3D (RADIUS_INNER_FRAC/RADIUS_OUTER_FRAC)
+    var r_i = lim.inner, r_o = lim.outer;
+    var xs = linspace(r_i, r_o, 30);
+    var ys = xs.map(function(rm){
+      return Math.abs(computeVtCD(omega, rm, dRho, dp_m, mu_pas, rhoF).vt) * 1000; // mm/s
+    });
+    var yMax = Math.max.apply(null, ys); if (yMax <= 0) yMax = 1;
     var yMin = 0;
-    var yMax = Math.max.apply(null, ys);
-    if (yMax <= 0) yMax = 1;
-    chartGPath.setAttribute('d', buildPathD(xs, ys, RPM_MIN, RPM_MAX, yMin, yMax));
+    chartVprofPath.setAttribute('d', buildPathD(xs, ys, r_i, r_o, yMin, yMax));
 
-    var pt = chartPoint(rpmCur, RPM_MIN, RPM_MAX, Gcur, yMin, yMax);
-    chartGMarker.setAttribute('cx', pt[0].toFixed(2));
-    chartGMarker.setAttribute('cy', pt[1].toFixed(2));
+    var rCur = clamp(currentSubstanceRadius(r_i), r_i, r_o);
+    var yCur = Math.abs(computeVtCD(omega, rCur, dRho, dp_m, mu_pas, rhoF).vt) * 1000;
+    var pt = chartPoint(rCur, r_i, r_o, yCur, yMin, yMax);
+    chartVprofMarker.setAttribute('cx', pt[0].toFixed(2));
+    chartVprofMarker.setAttribute('cy', pt[1].toFixed(2));
+    chartVprofCoord.textContent = '(' + rCur.toFixed(3) + ' m, ' + yCur.toFixed(3) + ' mm/s)';
+    chartVprofPauseTag.textContent = SIM.paused ? 'PAUSADO · valores congelados' : '';
 
-    chartGYMax.textContent = yMax.toFixed(0);
-    chartGYMin.textContent = '0';
+    renderAxisTicks(chartVprofXTicks, chartVprofYTicks, chartVprofGrid, r_i, r_o, yMin, yMax,
+      function(v){ return v.toFixed(3); },
+      function(v){ return v.toFixed(2); }, 4, 4);
+  }
+
+  function renderChartDPprof(omega, r, rhoF){
+    var lim = limits(r);
+    var r_i = lim.inner, r_o = lim.outer;
+    var xs = linspace(r_i, r_o, 30);
+    var ys = xs.map(function(rm){
+      return (rhoF * omega*omega * (rm*rm - r_i*r_i)) / 2; // Pa, acumulada desde r_i
+    });
+    var yMax = Math.max.apply(null, ys); if (yMax <= 0) yMax = 1;
+    var yMin = 0;
+    chartDPprofPath.setAttribute('d', buildPathD(xs, ys, r_i, r_o, yMin, yMax));
+
+    var rCur = clamp(currentSubstanceRadius(r_i), r_i, r_o);
+    var yCur = (rhoF * omega*omega * (rCur*rCur - r_i*r_i)) / 2;
+    var pt = chartPoint(rCur, r_i, r_o, yCur, yMin, yMax);
+    chartDPprofMarker.setAttribute('cx', pt[0].toFixed(2));
+    chartDPprofMarker.setAttribute('cy', pt[1].toFixed(2));
+    var dpFmt = formatPressure(yCur);
+    chartDPprofCoord.textContent = '(' + rCur.toFixed(3) + ' m, ' + dpFmt.v + ' ' + dpFmt.u + ')';
+    chartDPprofPauseTag.textContent = SIM.paused ? 'PAUSADO · valores congelados' : '';
+
+    renderAxisTicks(chartDPprofXTicks, chartDPprofYTicks, chartDPprofGrid, r_i, r_o, yMin, yMax,
+      function(v){ return v.toFixed(3); },
+      function(v){ return formatPressure(v).v + formatPressure(v).u; }, 4, 4);
   }
 
   function updateCharts(eq, og){
-    var dRho = parseFloat(dRhoSlider.value);
+    var sub = SIM.substance;
+    var dRho = sub ? sub.dRho : (eq.rhoP - eq.rhoF);
     var mu_pas = eq.mu_mpas * 1e-3;
-    renderChartVt(og.omega, eq.r, dRho, mu_pas);
-    renderChartTsed(og.omega, eq.r, dRho, mu_pas);
-    renderChartG(eq.rpm, eq.r, og.G);
+    var dp_m = parseFloat(dpSlider.value) * 1e-6;
+    renderChartVprof(og.omega, eq.r, dRho, dp_m, mu_pas, eq.rhoF);
+    renderChartDPprof(og.omega, eq.r, eq.rhoF);
   }
 
   // ---------------- Sincronización slider <-> input numérico ----------------
@@ -1787,6 +1953,16 @@
     lidHandle.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.05) + '; height:' + handleH + '; segmentsRadial:14');
     lidHandle.setAttribute('position', '0 ' + (lidY + (lidH/2) + (handleH/2)) + ' 0');
 
+    var lidBolts = document.querySelectorAll('.lidBolt');
+    var lidBoltR = r*0.018, lidBoltH = lidH*0.9;
+    for (var lbIdx=0; lbIdx<lidBolts.length; lbIdx++){
+      var lbAng = lbIdx*(2*Math.PI/N_LID_BOLTS);
+      var lbx = r*0.82*Math.cos(lbAng);
+      var lbz = r*0.82*Math.sin(lbAng);
+      lidBolts[lbIdx].setAttribute('geometry', 'primitive: cylinder; radius:' + lidBoltR + '; height:' + lidBoltH + '; segmentsRadial:8');
+      lidBolts[lbIdx].setAttribute('position', lbx + ' ' + lidY + ' ' + lbz);
+    }
+
     rotorFloor.setAttribute('geometry', 'primitive: cylinder; radius:' + (r*0.92) + '; height:' + (r*0.015) + '; segmentsRadial:28');
     rotorFloor.setAttribute('position', '0 ' + (-(h/2) + r*0.02) + ' 0');
     var hubH = r*0.1;
@@ -1834,6 +2010,48 @@
       vents[vIdx].setAttribute('position', vx + ' ' + baseTopY + ' ' + vz);
       vents[vIdx].setAttribute('rotation', '0 ' + (-vang*180/Math.PI) + ' 0');
     }
+
+    // banda de seguridad amarilla/negra alrededor del borde de la base
+    var hazard = document.querySelectorAll('.hazardStripe');
+    var hazW = (2*Math.PI*baseR*1.001) / N_HAZARD * 0.92, hazH = baseH*0.9, hazD = r*0.01;
+    for (var hIdx=0; hIdx<hazard.length; hIdx++){
+      var hang = hIdx*(2*Math.PI/N_HAZARD);
+      var hx = baseR*1.001*Math.cos(hang);
+      var hz = baseR*1.001*Math.sin(hang);
+      hazard[hIdx].setAttribute('geometry', 'primitive: box; width:' + hazW + '; height:' + hazH + '; depth:' + hazD);
+      hazard[hIdx].setAttribute('position', hx + ' ' + baseY + ' ' + hz);
+      hazard[hIdx].setAttribute('rotation', '0 ' + (-hang*180/Math.PI) + ' 0');
+    }
+
+    // pernos visibles en el borde superior de la base (look industrial)
+    var baseBolts = document.querySelectorAll('.baseBolt');
+    var boltR = r*0.014, boltH = r*0.02;
+    for (var bIdx=0; bIdx<baseBolts.length; bIdx++){
+      var bang = bIdx*(2*Math.PI/N_BASE_BOLTS) + Math.PI/N_BASE_BOLTS;
+      var bx = baseR*0.9*Math.cos(bang);
+      var bz = baseR*0.9*Math.sin(bang);
+      baseBolts[bIdx].setAttribute('geometry', 'primitive: cylinder; radius:' + boltR + '; height:' + boltH + '; segmentsRadial:8');
+      baseBolts[bIdx].setAttribute('position', bx + ' ' + (baseTopY + boltH/2) + ' ' + bz);
+    }
+
+    // panel de control (botones arranque/paro) sobre la carcasa de la base
+    var panel = document.getElementById('controlPanel');
+    var btnStart = document.getElementById('btnStart');
+    var btnStop = document.getElementById('btnStop');
+    var panelW = r*0.28, panelH = r*0.16, panelD = r*0.02;
+    var panelX = baseR*0.62, panelZ = -baseR*0.62, panelY = baseTopY + panelH/2 + 0.001;
+    panel.setAttribute('geometry', 'primitive: box; width:' + panelW + '; height:' + panelH + '; depth:' + panelD);
+    panel.setAttribute('position', panelX + ' ' + panelY + ' ' + panelZ);
+    panel.setAttribute('rotation', '0 45 0');
+    var btnR = r*0.028, btnH = r*0.012;
+    var btnAngleRad = 45 * Math.PI/180;
+    var offX = panelW*0.22*Math.cos(btnAngleRad), offZ = -panelW*0.22*Math.sin(btnAngleRad);
+    btnStart.setAttribute('geometry', 'primitive: cylinder; radius:' + btnR + '; height:' + btnH + '; segmentsRadial:14');
+    btnStart.setAttribute('position', (panelX - offX) + ' ' + (panelY + panelD*0.4) + ' ' + (panelZ - offZ));
+    btnStart.setAttribute('rotation', '90 0 0');
+    btnStop.setAttribute('geometry', 'primitive: cylinder; radius:' + btnR + '; height:' + btnH + '; segmentsRadial:14');
+    btnStop.setAttribute('position', (panelX + offX) + ' ' + (panelY + panelD*0.4) + ' ' + (panelZ + offZ));
+    btnStop.setAttribute('rotation', '90 0 0');
 
     plate.setAttribute('position', '0 ' + (baseY + 0.001) + ' ' + (baseR*0.92));
     plate.setAttribute('scale', (r*0.55) + ' ' + (r*0.55) + ' ' + (r*0.55));
@@ -1896,8 +2114,8 @@
 
     for (var i=0; i<N_PARTICLES; i++){
       var el = document.createElement('a-entity');
-      el.setAttribute('geometry', 'primitive: sphere; radius: ' + rad + '; segmentsWidth:10; segmentsHeight:8');
-      el.setAttribute('material', 'color:'+col+'; shader:flat');
+      el.setAttribute('geometry', 'primitive: sphere; radius: ' + rad + '; segmentsWidth:8; segmentsHeight:6');
+      el.setAttribute('material', 'color:'+col+'; shader:standard; metalness:0.25; roughness:0.45');
       holder.appendChild(el);
 
       var radius = lim.inner + Math.random()*(lim.outer-lim.inner)*0.8;
@@ -1934,13 +2152,13 @@
   function placeParticle(p){
     var x = p.radius * Math.cos(p.angle);
     var z = p.radius * Math.sin(p.angle);
-    p.el.object3D.position.set(x, p.y, z);
+    if (p.el.object3D) p.el.object3D.position.set(x, p.y, z); // sin A-Frame no hay object3D; se omite lo visual
   }
 
   function recolorSubstanceParticles(sub){
     var col = particleColor(sub.dRho, sub.color);
     for (var i=0;i<sub.particles.length;i++){
-      sub.particles[i].el.setAttribute('material', 'color:'+col+'; shader:flat');
+      sub.particles[i].el.setAttribute('material', 'color:'+col+'; shader:standard; metalness:0.25; roughness:0.45');
     }
     if (sub.wallEl) sub.wallEl.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
     if (sub.coreEl) sub.coreEl.setAttribute('material', 'color:'+col+'; opacity:0; transparent:true; side:double; shader:flat');
@@ -1986,131 +2204,161 @@
   // arrastre del usuario la controla directamente) y fuerza la visibilidad.
   // Al no reparentar nunca el nodo, se elimina el bug que hacía que la
   // simulación desapareciera al usar "Vista lateral".
-  AFRAME.registerComponent('rig-follow', {
-    schema: { target: { type: 'selector' } },
-    tick: function () {
-      var el = this.el;
-      if (SIM.lateralActive) {
-        el.object3D.visible = true;
-        return;
+  //
+  // IMPORTANTE: si la librería A-Frame no llegó a cargar (bloqueada por un
+  // firewall/proxy institucional, sin conexión, permiso de cámara denegado
+  // antes de que el script termine de correr, etc.), "AFRAME" no existe y
+  // llamar a AFRAME.registerComponent(...) sin protección lanza un error que
+  // detiene TODO el script — incluida la calculadora y los sliders, que no
+  // dependen para nada de A-Frame. Por eso todo este bloque se protege con
+  // un chequeo de disponibilidad: si A-Frame no está, se omite la vista 3D
+  // pero el panel de datos y la calculadora siguen funcionando con normalidad.
+  var AFRAME_OK = (typeof AFRAME !== 'undefined' && typeof AFRAME.registerComponent === 'function');
+
+  if (AFRAME_OK){
+    AFRAME.registerComponent('rig-follow', {
+      schema: { target: { type: 'selector' } },
+      tick: function () {
+        var el = this.el;
+        if (SIM.lateralActive) {
+          el.object3D.visible = true;
+          return;
+        }
+        var target = this.data.target;
+        if (!target || !target.object3D) return;
+        var visible = target.object3D.visible;
+        el.object3D.visible = visible;
+        if (!visible) return;
+        var THREE = AFRAME.THREE;
+        target.object3D.updateMatrixWorld();
+        var pos = new THREE.Vector3();
+        var quat = new THREE.Quaternion();
+        var scale = new THREE.Vector3();
+        target.object3D.matrixWorld.decompose(pos, quat, scale);
+        el.object3D.position.copy(pos);
+        el.object3D.quaternion.copy(quat);
+        el.object3D.scale.copy(scale);
       }
-      var target = this.data.target;
-      if (!target || !target.object3D) return;
-      var visible = target.object3D.visible;
-      el.object3D.visible = visible;
-      if (!visible) return;
-      var THREE = AFRAME.THREE;
-      target.object3D.updateMatrixWorld();
-      var pos = new THREE.Vector3();
-      var quat = new THREE.Quaternion();
-      var scale = new THREE.Vector3();
-      target.object3D.matrixWorld.decompose(pos, quat, scale);
-      el.object3D.position.copy(pos);
-      el.object3D.quaternion.copy(quat);
-      el.object3D.scale.copy(scale);
-    }
-  });
+    });
 
-  // ---------------- Componente A-Frame: motor de la simulación ----------------
-  AFRAME.registerComponent('centrifuge-sim', {
-    init: function(){
-      updateDrumGeometry(parseFloat(rSlider.value));
-      createSubstance(parseFloat(dRhoSlider.value), parseFloat(dpSlider.value));
-      updateReadouts();
-    },
+    // ---------------- Componente A-Frame: motor de la simulación ----------------
+    AFRAME.registerComponent('centrifuge-sim', {
+      init: function(){
+        updateDrumGeometry(parseFloat(rSlider.value));
+        var dRho0 = parseFloat(rhoPSlider.value) - parseFloat(rhoFSlider.value);
+        createSubstance(dRho0, parseFloat(dpSlider.value));
+        updateReadouts();
+      },
 
-    tick: function(time, timeDelta){
-      if (!timeDelta) return;
+      tick: function(time, timeDelta){
+        if (!timeDelta) return;
 
-      var light = document.getElementById('statusLight');
-      if (SIM.paused){
-        light.setAttribute('material', 'opacity', 0.22);
-        light.setAttribute('light', 'intensity', 0.08);
-      } else {
-        var pulse = 0.5 + 0.4*Math.sin(time/170);
-        light.setAttribute('material', 'opacity', pulse);
-        light.setAttribute('light', 'intensity', 0.15 + pulse*0.4);
-      }
-
-      if (SIM.paused) return;
-
-      var dt = Math.min(timeDelta, 50) / 1000;
-      var eq = currentEquipmentInputs();
-      var mu_pas = eq.mu_mpas * 1e-3;
-      var og = computeOmegaG(eq.rpm, eq.r);
-      var lim = limits(eq.r);
-
-      var angularVis = (og.omega / ANGULAR_VIS_SCALE);
-
-      // El tambor SIEMPRE gira mientras no esté en pausa,
-      // incluso cuando la sedimentación ya terminó.
-      var rotor = document.getElementById('drumRotor');
-      rotor.object3D.rotation.y += angularVis * dt;
-
-      // Las partículas solo migran si la simulación no ha finalizado
-      if (SIM.finished) { updateReadouts(); return; }
-
-      var sub = SIM.substance;
-      if (!sub) { updateReadouts(); return; }
-
-      var dp_m = sub.dp_um * 1e-6;
-      var vt = computeVt(og.omega, eq.r, sub.dRho, dp_m, mu_pas);
-
-      // Velocidad radial visual: escalada de v_t real, con piso y techo
-      // para que siempre sea perceptible pero nunca instantánea.
-      var radialSign = vt >= 0 ? 1 : -1;
-      var radialVis = Math.abs(sub.dRho) >= 5
-        ? radialSign * clamp(Math.abs(vt) * SPEED_VIS_SCALE, RADIAL_VIS_MIN, RADIAL_VIS_MAX)
-        : 0;
-
-      var anyArrived = false;
-      var allArrived = true;
-
-      for (var i=0; i<sub.particles.length; i++){
-        var p = sub.particles[i];
-        if (p.arrived){ continue; }
-
-        p.angle += angularVis * dt;
-
-        if (Math.abs(sub.dRho) >= 5){
-          p.radius += radialVis * dt;
-
-          if (sub.dRho > 0 && p.radius >= lim.outer){
-            p.radius = lim.outer;
-            p.arrived = true;
-            anyArrived = true;
-          } else if (sub.dRho < 0 && p.radius <= lim.inner){
-            p.radius = lim.inner;
-            p.arrived = true;
-            anyArrived = true;
-          }
+        var light = document.getElementById('statusLight');
+        if (SIM.paused){
+          light.setAttribute('material', 'opacity', 0.22);
+          light.setAttribute('light', 'intensity', 0.08);
         } else {
-          // Δρ ≈ 0: no hay migración neta, la partícula nunca "llega"
-          allArrived = false;
+          var pulse = 0.5 + 0.4*Math.sin(time/170);
+          light.setAttribute('material', 'opacity', pulse);
+          light.setAttribute('light', 'intensity', 0.15 + pulse*0.4);
         }
 
-        p.radius = clamp(p.radius, lim.inner, lim.outer);
-        placeParticle(p);
+        if (SIM.paused) return;
 
-        if (!p.arrived) allArrived = false;
+        var dt = Math.min(timeDelta, 50) / 1000;
+        var eq = currentEquipmentInputs();
+        var mu_pas = eq.mu_mpas * 1e-3;
+        var og = computeOmegaG(eq.rpm, eq.r);
+        var lim = limits(eq.r);
+
+        var angularVis = (og.omega / ANGULAR_VIS_SCALE);
+
+        // El tambor SIEMPRE gira mientras no esté en pausa,
+        // incluso cuando la sedimentación ya terminó.
+        var rotor = document.getElementById('drumRotor');
+        rotor.object3D.rotation.y += angularVis * dt;
+
+        // Las partículas solo migran si la simulación no ha finalizado
+        if (SIM.finished) { updateReadouts(); return; }
+
+        var sub = SIM.substance;
+        if (!sub) { updateReadouts(); return; }
+
+        var dp_m = sub.dp_um * 1e-6;
+        var vt = computeVtCD(og.omega, eq.r, sub.dRho, dp_m, mu_pas, eq.rhoF).vt;
+
+        // Velocidad radial visual: escalada de v_t real, con piso y techo
+        // para que siempre sea perceptible pero nunca instantánea.
+        var radialSign = vt >= 0 ? 1 : -1;
+        var radialVis = Math.abs(sub.dRho) >= 5
+          ? radialSign * clamp(Math.abs(vt) * SPEED_VIS_SCALE, RADIAL_VIS_MIN, RADIAL_VIS_MAX)
+          : 0;
+
+        var anyArrived = false;
+        var allArrived = true;
+
+        for (var i=0; i<sub.particles.length; i++){
+          var p = sub.particles[i];
+          if (p.arrived){ continue; }
+
+          p.angle += angularVis * dt;
+
+          if (Math.abs(sub.dRho) >= 5){
+            p.radius += radialVis * dt;
+
+            if (sub.dRho > 0 && p.radius >= lim.outer){
+              p.radius = lim.outer;
+              p.arrived = true;
+              anyArrived = true;
+            } else if (sub.dRho < 0 && p.radius <= lim.inner){
+              p.radius = lim.inner;
+              p.arrived = true;
+              anyArrived = true;
+            }
+          } else {
+            // Δρ ≈ 0: no hay migración neta, la partícula nunca "llega"
+            allArrived = false;
+          }
+
+          p.radius = clamp(p.radius, lim.inner, lim.outer);
+          placeParticle(p);
+
+          if (!p.arrived) allArrived = false;
+        }
+
+        if (anyArrived){
+          sub.accumulation = Math.min(1, sub.accumulation + 0.012);
+          updateSubstanceAccumulationVisual(sub, sub.accumulation);
+        }
+
+        if (allArrived && Math.abs(sub.dRho) >= 5 && !SIM.finished){
+          SIM.finished = true;
+          SIM.paused = true;
+          pauseBtn.classList.add('is-paused');
+          pauseLabel.textContent = 'Reanudar';
+          repeatBtn.hidden = false;
+        }
+
+        updateReadouts();
       }
-
-      if (anyArrived){
-        sub.accumulation = Math.min(1, sub.accumulation + 0.012);
-        updateSubstanceAccumulationVisual(sub, sub.accumulation);
-      }
-
-      if (allArrived && Math.abs(sub.dRho) >= 5 && !SIM.finished){
-        SIM.finished = true;
-        SIM.paused = true;
-        pauseBtn.classList.add('is-paused');
-        pauseLabel.textContent = 'Reanudar';
-        repeatBtn.hidden = false;
-      }
-
-      updateReadouts();
+    });
+  } else {
+    // A-Frame no cargó: se omite toda la vista 3D/AR, pero el panel de
+    // datos, las gráficas y la calculadora se inicializan igual, ya que
+    // no dependen de A-Frame para nada.
+    console.warn('[Centrifugadora] A-Frame no se cargó (bloqueado o sin conexión). Se omite la vista 3D/AR; el panel de datos y la calculadora funcionan igual.');
+    try {
+      updateDrumGeometry(parseFloat(rSlider.value));
+    } catch(e) { /* elementos 3D inexistentes sin A-Frame: se ignora */ }
+    var dRho0Fallback = parseFloat(rhoPSlider.value) - parseFloat(rhoFSlider.value);
+    createSubstance(dRho0Fallback, parseFloat(dpSlider.value));
+    updateReadouts();
+    if (markerHint){
+      markerHint.textContent = 'Vista 3D/AR no disponible en este navegador (no se pudo cargar el motor gráfico) — el panel de datos y la calculadora sí funcionan.';
+      markerHint.style.opacity = '1';
+      markerHint.style.pointerEvents = 'none';
     }
-  });
+  }
 
   // ---------------- Eventos de UI: equipo ----------------
   bindSliderNumberPair(rpmSlider, rpmInput, updateReadouts);
@@ -2122,13 +2370,19 @@
   });
 
   // ---------------- Eventos de UI: partícula / sustancia ----------------
-  bindSliderNumberPair(dRhoSlider, dRhoInput, function(){
+  // Δρ ya no es un slider independiente: se deriva de ρp y ρf, que ahora
+  // se controlan por separado (ρf ya no está fija en 1000 kg/m³).
+  function onDensitySliderChange(){
     var sub = SIM.substance;
-    var v = parseFloat(dRhoSlider.value);
-    dRhoLive.textContent = v.toFixed(0);
+    var rhoP = parseFloat(rhoPSlider.value);
+    var rhoF = parseFloat(rhoFSlider.value);
+    var dRho = rhoP - rhoF;
+    rhoPLive.textContent = rhoP.toFixed(0);
+    rhoFLive.textContent = rhoF.toFixed(0);
+    dRhoLive.textContent = dRho.toFixed(0);
     if (sub){
-      sub.dRho = v;
-      var sign = v >= 5 ? 1 : (v <= -5 ? -1 : 0);
+      sub.dRho = dRho;
+      var sign = dRho >= 5 ? 1 : (dRho <= -5 ? -1 : 0);
       if (sign !== sub.lastSign){
         sub.lastSign = sign;
         recolorSubstanceParticles(sub);
@@ -2136,7 +2390,9 @@
       }
     }
     updateReadouts(); // también refresca gauges/gráficas aunque no haya sustancia activa
-  });
+  }
+  bindSliderNumberPair(rhoPSlider, rhoPInput, onDensitySliderChange);
+  bindSliderNumberPair(rhoFSlider, rhoFInput, onDensitySliderChange);
 
   bindSliderNumberPair(dpSlider, dpInput, function(){
     var sub = SIM.substance;
@@ -2318,22 +2574,18 @@
     var omega  = (rpm * 2 * Math.PI) / 60;            // rad/s
     var G      = (omega * omega * r) / G_GRAV;        // adim
 
-    var vt = (dp_m*dp_m * dRho * omega*omega * r) / (18 * mu_pas);  // m/s (con signo)
-    var vt_mm = vt * 1000;                            // mm/s
+    // Velocidad de sedimentación: Ec. 5 (Stokes, laminar) o Ec. 6 (turbulento),
+    // según el régimen que resulte del propio cálculo (ver computeVtCD).
+    var res    = computeVtCD(omega, r, dRho, dp_m, mu_pas, rhoF);
+    var vt     = res.vt;
+    var vt_mm  = vt * 1000;                            // mm/s
+    var Re     = res.Re;
 
-    // Re de partícula para verificar validez de Stokes
-    // Re = rhoF * |vt| * dp / mu
-    var Re = (rhoF * Math.abs(vt) * dp_m) / mu_pas;
-
-    // Tiempo de sedimentación por integración exacta de Stokes-centrífuga:
-    // t = [18μ / (dp² · Δρ · ω²)] · ln(r_o / r_i)
-    // r_i = r*0.10, r_o = r*0.93 (límites del tambor)
-    var r_i = r * 0.10, r_o = r * 0.93;
-    var t_sed_s = null;
+    // Tiempo de sedimentación por integración numérica de dr/dt = vt_CD(r)
+    // entre r_i = 0.10·r y r_o = 0.93·r (límites del tambor)
+    var t_sed_s = computeTsedCD(omega, r, dRho, dp_m, mu_pas, rhoF);
     var t_sed_str = '—', t_sed_unit_str = '';
-    if (Math.abs(dRho) >= 1 && Math.abs(vt) > 1e-15){
-      var K = (18 * mu_pas) / (dp_m*dp_m * Math.abs(dRho) * omega*omega);
-      t_sed_s = K * Math.log(r_o / r_i);
+    if (t_sed_s !== null){
       // elegir unidad adecuada
       if (t_sed_s < 60){
         t_sed_str = t_sed_s.toFixed(3);
@@ -2351,14 +2603,16 @@
     }
 
     document.getElementById('co_omega').textContent = omega.toFixed(3);
+    document.getElementById('co_omega_rpm').textContent = rpm.toFixed(0);
     document.getElementById('co_G').textContent     = G.toFixed(3);
     document.getElementById('co_dRho').textContent  = dRho.toFixed(3);
     document.getElementById('co_vt').textContent    = vt_mm.toFixed(3);
-    document.getElementById('co_Re').textContent    = Re.toExponential(3);
+    document.getElementById('co_Re').textContent    = formatReInt(Re);
+    document.getElementById('co_Re_regime').textContent = res.regime;
     document.getElementById('co_tsed').textContent  = t_sed_str;
     document.getElementById('co_tsed_unit').textContent = t_sed_unit_str;
 
-    // Aviso si Re > 0.5 (Stokes puede no ser válido)
+    // Aviso si Re >= 0.5 (fuera del régimen de Stokes puro, ya corregido con CD)
     var reBadge = document.getElementById('co_Re');
     reBadge.style.color = Re < 0.5 ? 'var(--blue)' : '#ffb347';
 
@@ -2376,6 +2630,72 @@
     markerHint.style.opacity = '1';
     markerHint.style.pointerEvents = 'auto';
   });
+
+  // ---------------- Secciones del panel: colapsables e independientes ----------------
+  // Cada sección (Equipo/variables, Ecuaciones, Gráficas, etc.) se puede
+  // plegar/desplegar por separado haciendo clic en su título. El estado
+  // (plegada/desplegada) se guarda en localStorage por sección, así que
+  // se recuerda al recargar la página.
+  function initCollapsibleSections(){
+    var sections = document.querySelectorAll('.panelSection');
+    sections.forEach(function(sec){
+      var title = sec.querySelector(':scope > .sectionTitle');
+      if (!title) return;
+
+      // envuelve todo el contenido restante de la sección en un solo bloque
+      var body = document.createElement('div');
+      body.className = 'sectionBody';
+      var node = title.nextSibling;
+      while (node){
+        var next = node.nextSibling;
+        body.appendChild(node);
+        node = next;
+      }
+      sec.appendChild(body);
+
+      // chevron indicador de plegado/desplegado
+      var chev = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      chev.setAttribute('class', 'sectionChevron');
+      chev.setAttribute('viewBox', '0 0 24 24');
+      chev.setAttribute('fill', 'none');
+      chev.setAttribute('stroke', 'currentColor');
+      chev.setAttribute('stroke-width', '2.4');
+      chev.setAttribute('stroke-linecap', 'round');
+      chev.setAttribute('stroke-linejoin', 'round');
+      chev.innerHTML = '<path d="M6 9l6 6 6-6"/>';
+      title.appendChild(chev);
+
+      // NOTA IMPORTANTE (bug corregido): antes se congelaba aquí
+      // body.scrollHeight en un valor fijo en píxeles. Eso funcionaba al
+      // cargar la página, pero en cuanto CUALQUIER contenido interno crecía
+      // después (el panel "Parámetros avanzados" al desplegarse, o los
+      // resultados de la calculadora al aparecer tras pulsar "Calcular"),
+      // ese contenido quedaba recortado por el overflow:hidden de este
+      // wrapper, porque el alto máximo ya estaba fijado a un valor viejo y
+      // más chico. Por eso no se veían ni los parámetros avanzados ni los
+      // resultados de la calculadora. Ahora, mientras la sección esté
+      // desplegada, se usa un máximo generoso y fijo (suficiente para
+      // cualquier contenido de este panel) en vez de recalcular un valor
+      // exacto — así nunca vuelve a recortar contenido que crece después.
+      var EXPANDED_MAX_HEIGHT = '4000px';
+      function applyHeight(){
+        body.style.maxHeight = sec.classList.contains('collapsed') ? '0px' : EXPANDED_MAX_HEIGHT;
+      }
+
+      var storeKey = 'centrifugeSectionCollapsed_' + sec.id;
+      var savedCollapsed = false;
+      try { savedCollapsed = window.localStorage.getItem(storeKey) === '1'; } catch(e){}
+      if (savedCollapsed) sec.classList.add('collapsed');
+      applyHeight();
+
+      title.addEventListener('click', function(){
+        sec.classList.toggle('collapsed');
+        applyHeight();
+        try { window.localStorage.setItem(storeKey, sec.classList.contains('collapsed') ? '1' : '0'); } catch(e){}
+      });
+    });
+  }
+  initCollapsibleSections();
 
 })();
 </script>
